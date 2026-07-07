@@ -1,0 +1,112 @@
+import type { AIActionConfig } from "@/types/ai";
+
+export const actionConfigs: AIActionConfig[] = [
+  {
+    type: "write",
+    label: "Write",
+    icon: "write",
+    systemPrompt: "You are a helpful writing assistant. Write clear, engaging content based on the user's request.",
+    userPromptTemplate: "{input}",
+    requiresSelection: false,
+  },
+  {
+    type: "continue",
+    label: "Continue writing",
+    icon: "continue",
+    systemPrompt: "Continue the text naturally, maintaining the same style and tone.",
+    userPromptTemplate: "Continue writing from this point:\n\n{input}",
+    requiresSelection: false,
+  },
+  {
+    type: "summarize",
+    label: "Summarize",
+    icon: "summarize",
+    systemPrompt: "Summarize the following text concisely while preserving key information.",
+    userPromptTemplate: "Summarize this:\n\n{input}",
+    requiresSelection: true,
+  },
+  {
+    type: "translate",
+    label: "Translate",
+    icon: "translate",
+    systemPrompt: "Translate the following text accurately while preserving its meaning and tone.",
+    userPromptTemplate: "Translate this to {targetLanguage}:\n\n{input}",
+    requiresSelection: true,
+  },
+  {
+    type: "explain",
+    label: "Explain",
+    icon: "explain",
+    systemPrompt: "Explain the following text clearly and thoroughly.",
+    userPromptTemplate: "Explain this:\n\n{input}",
+    requiresSelection: true,
+  },
+  {
+    type: "improve",
+    label: "Improve writing",
+    icon: "improve",
+    systemPrompt: "Improve the writing quality while preserving the original meaning. Fix clarity, flow, and style.",
+    userPromptTemplate: "Improve this text:\n\n{input}",
+    requiresSelection: true,
+  },
+  {
+    type: "fix-spelling",
+    label: "Fix spelling & grammar",
+    icon: "fix-spelling",
+    systemPrompt: "Fix spelling and grammar errors. Do not change the style or meaning.",
+    userPromptTemplate: "Fix spelling and grammar:\n\n{input}",
+    requiresSelection: true,
+  },
+  {
+    type: "change-tone",
+    label: "Change tone",
+    icon: "change-tone",
+    systemPrompt: "Rewrite the following text in the specified tone while preserving the original meaning.",
+    userPromptTemplate: "Rewrite this in a {tone} tone:\n\n{input}",
+    requiresSelection: true,
+  },
+  {
+    type: "simplify",
+    label: "Simplify",
+    icon: "simplify",
+    systemPrompt: "Simplify the following text to make it easier to understand. Use simpler words and shorter sentences.",
+    userPromptTemplate: "Simplify this:\n\n{input}",
+    requiresSelection: true,
+  },
+  {
+    type: "expand",
+    label: "Expand",
+    icon: "expand",
+    systemPrompt: "Expand on the following text with more detail, examples, and depth.",
+    userPromptTemplate: "Expand on this:\n\n{input}",
+    requiresSelection: true,
+  },
+  {
+    type: "shorten",
+    label: "Shorten",
+    icon: "shorten",
+    systemPrompt: "Shorten the following text while preserving key information. Make it concise.",
+    userPromptTemplate: "Shorten this:\n\n{input}",
+    requiresSelection: true,
+  },
+  {
+    type: "brainstorm",
+    label: "Brainstorm",
+    icon: "brainstorm",
+    systemPrompt: "Generate creative ideas and possibilities related to the user's topic.",
+    userPromptTemplate: "Brainstorm ideas about:\n\n{input}",
+    requiresSelection: false,
+  },
+  {
+    type: "find-actions",
+    label: "Find action items",
+    icon: "find-actions",
+    systemPrompt: "Extract action items, tasks, and next steps from the following text. List them clearly.",
+    userPromptTemplate: "Find action items in:\n\n{input}",
+    requiresSelection: true,
+  },
+];
+
+export function getActionConfig(type: string): AIActionConfig | undefined {
+  return actionConfigs.find((a) => a.type === type);
+}
