@@ -32,7 +32,7 @@ export function PropertyCell({ property, cell, onChange }: PropertyCellProps) {
 
   if (property.prop_type === "select" || property.prop_type === "status") {
     let options: { name: string; color: string }[] = [];
-    try { options = JSON.parse(property.options || "[]"); } catch {}
+    try { const parsed = JSON.parse(property.options || "[]"); options = Array.isArray(parsed) ? parsed : []; } catch {}
     const selected = options.find((o) => o.name === value);
     return (
       <div className="px-3 py-2 min-w-[140px]">

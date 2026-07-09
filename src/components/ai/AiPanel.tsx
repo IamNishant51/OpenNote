@@ -77,6 +77,10 @@ function parseInput(text: string): { actionType?: AIActionType; prompt: string }
   return { actionType: undefined, prompt: trimmed };
 }
 
+function supportsToolCalling(providerType: string): boolean {
+  return !["ollama", "lmstudio", "custom"].includes(providerType);
+}
+
 function buildSystemPrompt(pageTitle?: string, pageContent?: string, actionType?: string): string {
   const parts: string[] = [
     "You are OpenNotes AI, an AI writing assistant inside a note-taking app.",
@@ -243,21 +247,43 @@ export function AiPanel() {
       const system = buildSystemPrompt(ctx.title, ctx.content, actionType);
       const history = [...chatMessages, userMsg].map(m => ({ role: m.role, content: m.content }) as { role: "user" | "assistant"; content: string });
 
-      const result = streamText({
-        model,
-        system,
-        messages: history,
-        tools: { search_web: searchWeb, search_youtube: searchYouTube },
-      });
+      const hasTools = supportsToolCalling(selectedProvider!.type);
+      const doStream = async (withTools: boolean) => {
+        const result = streamText({
+          model,
+          system,
+          messages: history,
+          ...(withTools ? { tools: { search_web: searchWeb, search_youtube: searchYouTube } } : {}),
+        });
+        let full = "";
+        for await (const chunk of result.textStream) {
+          full += chunk;
+          setStreamingContent(full);
+        }
+        return full.trim();
+      };
 
-      let full = "";
-      for await (const chunk of result.textStream) {
-        full += chunk;
-        setStreamingContent(full);
+      let content: string;
+      try {
+        content = await doStream(hasTools);
+      } catch (streamErr) {
+        if (hasTools) {
+          const msg = String(streamErr).toLowerCase();
+          if (msg.includes("tool") || msg.includes("not support") || msg.includes("400")) {
+            console.warn("Tools not supported by this model, retrying without:", msg);
+            content = await doStream(false);
+          } else {
+            throw streamErr;
+          }
+        } else {
+          throw streamErr;
+        }
       }
 
-      const content = full.trim();
-      if (!content) return;
+      if (!content) {
+        setStreamingContent("The model returned an empty response. Try a different prompt or provider.");
+        return;
+      }
 
       insertToPage(content);
       addChatMessage({
@@ -267,7 +293,9 @@ export function AiPanel() {
         timestamp: Date.now(),
       });
     } catch (e) {
-      setStreamingContent(`Error: ${e instanceof Error ? e.message : "AI request failed"}`);
+      const errMsg = e instanceof Error ? e.message : "AI request failed";
+      setStreamingContent(`Error: ${errMsg}`);
+      console.error("[AiPanel] sendMessage error:", e);
     } finally {
       setStreaming(false);
       setStreamingContent("");

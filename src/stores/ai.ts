@@ -108,26 +108,6 @@ export const useAIStore = create<AIStore>((set, get) => ({
       } catch { /* ignore parse errors */ }
     }
 
-    try {
-      const localModels = await discoverProviderModels(defaults[2]);
-      defaults[2].models = localModels.filter((m) => m.providerId === "ollama");
-    } catch {}
-
-    try {
-      const lmStudioModels = await discoverProviderModels(defaults[3]);
-      defaults[3].models = lmStudioModels.filter((m) => m.providerId === "lmstudio");
-    } catch {}
-
-    try {
-      const nvidiaModels = await discoverProviderModels(defaults[4]);
-      defaults[4].models = nvidiaModels;
-    } catch {}
-
-    try {
-      const groqModels = await discoverProviderModels(defaults[5]);
-      defaults[5].models = groqModels;
-    } catch {}
-
     const enabled = defaults.filter((p) => p.enabled || p.apiKey);
     set({ providers: defaults });
 
