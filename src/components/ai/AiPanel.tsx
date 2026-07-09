@@ -122,7 +122,7 @@ function buildSystemPrompt(pageTitle?: string, pageContent?: string, actionType?
 }
 
 export function AiPanel() {
-  const { providers, selectedProviderId, selectedModelId, chatMessages, addChatMessage, clearChat, setPanelOpen, setSettingsOpen } = useAIStore();
+  const { providers, selectedProviderId, selectedModelId, chatMessages, addChatMessage, clearChat, setPanelOpen, setSettingsOpen, customAgents } = useAIStore();
   const currentPage = useWorkspaceStore(s => s.currentPage);
   const [input, setInput] = useState("");
   const [showCommands, setShowCommands] = useState(false);
@@ -131,11 +131,13 @@ export function AiPanel() {
   const [streamingContent, setStreamingContent] = useState("");
   const [elapsed, setElapsed] = useState(0);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const selectedProvider = providers.find(p => p.id === selectedProviderId);
   const hasProvider = !!selectedProvider && !!selectedModelId;
+  const selectedAgent = selectedAgentId ? customAgents.find(a => a.id === selectedAgentId) ?? null : null;
 
   const filteredCommands = useMemo(() => {
     if (!showCommands) return [];
@@ -255,7 +257,9 @@ export function AiPanel() {
       }
 
       const ctx = await getContext();
-      const system = buildSystemPrompt(ctx.title, ctx.content, actionType);
+      const system = selectedAgent
+        ? `${selectedAgent.systemPrompt}\n\n## PAGE CONTEXT\nTitle: ${ctx.title || "Untitled"}\nContent: ${(ctx.content || "(empty)").slice(0, 8000)}`
+        : buildSystemPrompt(ctx.title, ctx.content, actionType);
       const history = [...chatMessages, userMsg].map(m => ({ role: m.role, content: m.content }) as { role: "user" | "assistant"; content: string });
 
       const hasTools = supportsToolCalling(selectedProvider!.type);
@@ -313,7 +317,7 @@ export function AiPanel() {
       clearInterval(timer);
       setElapsed(0);
     }
-  }, [hasProvider, streaming, selectedProvider, selectedModelId, chatMessages, addChatMessage, getContext, insertToPage, searchWeb, searchYouTube, setElapsed]);
+  }, [hasProvider, streaming, selectedProvider, selectedModelId, chatMessages, addChatMessage, getContext, insertToPage, searchWeb, searchYouTube, setElapsed, selectedAgent]);
 
   const handleSend = useCallback(() => {
     const { actionType, prompt } = parseInput(input);
@@ -357,7 +361,7 @@ export function AiPanel() {
       <div className="flex items-center justify-between px-3 py-2 border-b border-hairline flex-shrink-0">
         <div className="flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-primary" />
-          <span className="text-sm font-semibold text-ink">AI</span>
+          <span className="text-sm font-semibold text-ink">{selectedAgent ? `AI - ${selectedAgent.name}` : "AI"}</span>
         </div>
         <div className="flex items-center gap-1">
           <button onClick={() => clearChat()} className="flex h-7 w-7 items-center justify-center rounded-md hover:bg-sidebar-hover text-ink-muted" title="Clear chat"><Trash2 className="h-3.5 w-3.5" /></button>
@@ -365,6 +369,30 @@ export function AiPanel() {
           <button onClick={() => setPanelOpen(false)} className="flex h-7 w-7 items-center justify-center rounded-md hover:bg-sidebar-hover text-ink-muted" title="Close"><X className="h-3.5 w-3.5" /></button>
         </div>
       </div>
+
+      {customAgents.length > 0 && (
+        <div className="flex items-center gap-1 px-3 py-1.5 border-b border-hairline flex-shrink-0">
+          <select
+            value={selectedAgentId ?? ""}
+            onChange={e => setSelectedAgentId(e.target.value || null)}
+            className="flex-1 text-xs text-ink-muted bg-canvas-soft rounded-lg border border-hairline px-2 py-1 outline-none"
+          >
+            <option value="">Default AI</option>
+            {customAgents.map(a => (
+              <option key={a.id} value={a.id}>{a.name}</option>
+            ))}
+          </select>
+          {selectedAgent && (
+            <button
+              onClick={() => setSelectedAgentId(null)}
+              className="flex h-5 w-5 items-center justify-center rounded hover:bg-sidebar-hover text-ink-faint"
+              title="Reset to Default AI"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          )}
+        </div>
+      )}
 
       <div className="flex-1 overflow-y-auto px-3 py-3 space-y-4">
         {!hasProvider ? (

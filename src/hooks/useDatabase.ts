@@ -8,37 +8,35 @@ export function useDatabase() {
   const store = useDBStore();
 
   const loadDatabase = useCallback(async (pageId: string) => {
-    if (!isTauriRuntime()) {
-      const now = new Date().toISOString();
-      const database: Database_ = {
-        id: pageId,
-        page_id: pageId,
-        title: "Untitled database",
-        created_at: now,
-        updated_at: now,
-      };
-      const defaultView: DBView = {
-        id: `${pageId}-table`,
-        database_id: database.id,
-        name: "Table",
-        view_type: "table",
-        config: "{}",
-        sort_order: 0,
-      };
-
-      store.setLoading(true);
-      store.setDatabase(database);
-      store.setProperties([]);
-      store.setItems([]);
-      store.setItemProperties(pageId, []);
-      store.setViews([defaultView]);
-      store.setActiveViewId(defaultView.id);
-      store.setLoading(false);
-      return;
-    }
-
+    store.setLoading(true);
     try {
-      store.setLoading(true);
+      if (!isTauriRuntime()) {
+        const now = new Date().toISOString();
+        const database: Database_ = {
+          id: pageId,
+          page_id: pageId,
+          title: "Untitled database",
+          created_at: now,
+          updated_at: now,
+        };
+        const defaultView: DBView = {
+          id: `${pageId}-table`,
+          database_id: database.id,
+          name: "Table",
+          view_type: "table",
+          config: "{}",
+          sort_order: 0,
+        };
+
+        store.setDatabase(database);
+        store.setProperties([]);
+        store.setItems([]);
+        store.setItemProperties(pageId, []);
+        store.setViews([defaultView]);
+        store.setActiveViewId(defaultView.id);
+        return;
+      }
+
       const db = await invoke<Database_>("get_database", { pageId });
       store.setDatabase(db);
 
@@ -51,9 +49,14 @@ export function useDatabase() {
       store.setItems(items);
       store.setViews(views);
 
+      const allProps = await invoke<DBItemProperty[]>("get_item_properties_batch", { itemIds: items.map(i => i.id) });
+      const propsByItemId: Record<string, DBItemProperty[]> = {};
+      for (const prop of allProps) {
+        if (!propsByItemId[prop.item_id]) propsByItemId[prop.item_id] = [];
+        propsByItemId[prop.item_id].push(prop);
+      }
       for (const item of items) {
-        const props = await invoke<DBItemProperty[]>("get_item_properties", { itemId: item.id });
-        store.setItemProperties(item.id, props);
+        store.setItemProperties(item.id, propsByItemId[item.id] || []);
       }
 
       if (views.length > 0) store.setActiveViewId(views[0].id);

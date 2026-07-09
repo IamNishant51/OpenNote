@@ -291,6 +291,18 @@ CREATE TABLE IF NOT EXISTS document_states (page_id TEXT PRIMARY KEY, yjs_blob B
         stmt.query_map(params![item_id], |r| Ok(DBItemProperty{id:r.get(0)?,item_id:r.get(1)?,property_id:r.get(2)?,value:r.get(3)?})).unwrap().collect()
     }
 
+    pub fn get_item_properties_batch(&self, item_ids: &[String]) -> Result<Vec<DBItemProperty>> {
+        if item_ids.is_empty() {
+            return Ok(vec![]);
+        }
+        let conn = self.conn.lock().unwrap();
+        let placeholders: Vec<String> = item_ids.iter().map(|_| "?".to_string()).collect();
+        let sql = format!("SELECT id,item_id,property_id,value FROM database_item_properties WHERE item_id IN ({})", placeholders.join(","));
+        let mut stmt = conn.prepare(&sql)?;
+        let params: Vec<&dyn rusqlite::types::ToSql> = item_ids.iter().map(|s| s as &dyn rusqlite::types::ToSql).collect();
+        stmt.query_map(params.as_slice(), |r| Ok(DBItemProperty{id:r.get(0)?,item_id:r.get(1)?,property_id:r.get(2)?,value:r.get(3)?})).unwrap().collect()
+    }
+
     pub fn update_item_property(&self, item_id: &str, property_id: &str, value: &str) -> Result<()> {
         let conn = self.conn.lock().unwrap();
         let exists: i64 = conn.query_row("SELECT COUNT(*) FROM database_item_properties WHERE item_id=?1 AND property_id=?2", params![item_id,property_id], |r| r.get(0))?;

@@ -14,6 +14,7 @@ import { VersionHistory } from "@/components/shared/VersionHistory";
 import { BacklinksPanel } from "@/components/shared/BacklinksPanel";
 import { TableOfContentsPanel } from "@/components/shared/TableOfContentsPanel";
 import { TemplatesGallery } from "@/components/shared/TemplatesGallery";
+import { ToastContainer } from "@/components/shared/ToastContainer";
 import { SharingDialog } from "@/components/collaboration/SharingDialog";
 import { NotificationsPanel } from "@/components/collaboration/NotificationsPanel";
 import { CursorOverlay } from "@/components/collaboration/CursorOverlay";
@@ -174,6 +175,7 @@ function App() {
       <TemplatesGallery open={templatesGalleryOpen} onClose={() => setTemplatesGalleryOpen(false)} />
       {currentPage && <SharingDialog pageId={currentPage.id} open={sharingOpen} onClose={() => setSharingOpen(false)} />}
       {provider && ready && <CursorOverlay provider={provider} />}
+      <ToastContainer />
     </div>
   );
 }

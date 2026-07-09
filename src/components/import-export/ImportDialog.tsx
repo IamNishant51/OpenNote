@@ -4,8 +4,8 @@ import { cn } from "@/lib/utils";
 import { useWorkspaceStore } from "@/stores/workspace";
 import { useTauriCommands } from "@/hooks/useTauriCommands";
 import { parseCSV, csvToTableBlock } from "@/lib/import-export/csv";
-import { isTauriRuntime } from "@/lib/tauri";
-import { safeInvoke } from "@/lib/tauri";
+import { isTauriRuntime, safeInvoke } from "@/lib/tauri";
+import { editorRef } from "@/lib/editorRef";
 
 type ImportFormat = "markdown" | "csv" | "html";
 
@@ -20,25 +20,6 @@ const formats: { value: ImportFormat; label: string; icon: React.ReactNode; desc
   { value: "csv", label: "CSV", icon: <Table2 className="h-5 w-5" />, description: "Import .csv as a table", extensions: [".csv"] },
   { value: "html", label: "HTML", icon: <Code className="h-5 w-5" />, description: "Import .html or .htm files", extensions: [".html", ".htm"] },
 ];
-
-function textToBlocks(content: string): any[] {
-  const lines = content.split("\n").filter(l => l.trim());
-  if (lines.length === 0) return [{ type: "paragraph", content: "", children: [] }];
-  const blocks: any[] = [];
-  for (const line of lines) {
-    if (line.startsWith("# ")) blocks.push({ type: "heading", content: line.slice(2), props: { level: 1 }, children: [] });
-    else if (line.startsWith("## ")) blocks.push({ type: "heading", content: line.slice(3), props: { level: 2 }, children: [] });
-    else if (line.startsWith("### ")) blocks.push({ type: "heading", content: line.slice(4), props: { level: 3 }, children: [] });
-    else if (line.startsWith("- ") || line.startsWith("* ")) blocks.push({ type: "bullet_list_item", content: line.slice(2), children: [] });
-    else blocks.push({ type: "paragraph", content: line, children: [] });
-  }
-  return blocks;
-}
-
-function htmlToBlocks(html: string): any[] {
-  const text = html.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim();
-  return text ? textToBlocks(text) : [{ type: "paragraph", content: "(empty HTML)", children: [] }];
-}
 
 export function ImportDialog({ open, onClose, onImportComplete }: ImportDialogProps) {
   const [format, setFormat] = useState<ImportFormat>("markdown");
@@ -72,23 +53,23 @@ export function ImportDialog({ open, onClose, onImportComplete }: ImportDialogPr
     try {
       const content = await file.text();
 
+      const editor = editorRef.get();
+      if (!editor) {
+        setError("No editor instance available");
+        return;
+      }
+
+      let blocks: any[];
       if (format === "csv") {
         const data = parseCSV(content);
-        const block = csvToTableBlock(data);
-        const page = await createPage(currentWorkspace!.id);
-        if (page) {
-          await saveDocumentState(page.id, [block]);
-          onImportComplete(page.id);
-        }
+        blocks = [csvToTableBlock(data)];
       } else if (format === "html") {
-        const blocks = htmlToBlocks(content);
-        const page = await createPage(currentWorkspace!.id);
-        if (page) {
-          await saveDocumentState(page.id, blocks);
-          onImportComplete(page.id);
-        }
+        blocks = editor.tryParseHTMLToBlocks(content);
       } else {
-        const blocks = textToBlocks(content);
+        blocks = editor.tryParseMarkdownToBlocks(content);
+      }
+
+      if (blocks?.length) {
         const page = await createPage(currentWorkspace!.id);
         if (page) {
           await saveDocumentState(page.id, blocks);

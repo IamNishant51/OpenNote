@@ -117,6 +117,46 @@ export function PropertyCell({ property, cell, onChange }: PropertyCellProps) {
     );
   }
 
+  if (property.prop_type === "multi-select") {
+    let options: { name: string; color: string }[] = [];
+    try { const parsed = JSON.parse(property.options || "[]"); options = Array.isArray(parsed) ? parsed : []; } catch {}
+    const selected = value ? value.split(",").filter(Boolean) : [];
+    const toggle = (name: string) => {
+      const set = new Set(selected);
+      if (set.has(name)) set.delete(name); else set.add(name);
+      onChange(Array.from(set).join(","));
+    };
+    return (
+      <div className="px-3 py-2 min-w-[160px] flex flex-wrap gap-1">
+        {options.map((opt) => {
+          const isSelected = selected.includes(opt.name);
+          return (
+            <button key={opt.name} onClick={() => toggle(opt.name)}
+              className={cn(
+                "rounded-md px-2 py-0.5 text-xs font-medium transition-all",
+                isSelected ? (selectColors[opt.color] || selectColors.gray) : "bg-canvas-soft text-ink-faint border border-hairline"
+              )}
+            >
+              {opt.name}
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
+
+  if (property.prop_type === "progress") {
+    const pct = Math.min(100, Math.max(0, parseInt(value) || 0));
+    return (
+      <div className="px-3 py-2 min-w-[140px] flex items-center gap-2">
+        <div className="flex-1 h-2 rounded-full bg-canvas-soft overflow-hidden">
+          <div className="h-full rounded-full bg-primary transition-all duration-300" style={{ width: `${pct}%` }} />
+        </div>
+        <span className="text-xs text-ink-faint tabular-nums w-8 text-right">{pct}%</span>
+      </div>
+    );
+  }
+
   if (editing) {
     return (
       <div className="px-3 py-2 min-w-[140px]">

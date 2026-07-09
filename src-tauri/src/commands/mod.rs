@@ -45,6 +45,8 @@ pub fn delete_item(db: State<'_, Database>, id: String) -> Result<(), String> { 
 #[tauri::command]
 pub fn get_item_properties(db: State<'_, Database>, item_id: String) -> Result<Vec<DBItemProperty>, String> { db.get_item_properties(&item_id).map_err(|e| e.to_string()) }
 #[tauri::command]
+pub fn get_item_properties_batch(db: State<'_, Database>, item_ids: Vec<String>) -> Result<Vec<DBItemProperty>, String> { db.get_item_properties_batch(&item_ids).map_err(|e| e.to_string()) }
+#[tauri::command]
 pub fn update_item_property(db: State<'_, Database>, item_id: String, property_id: String, value: String) -> Result<(), String> { db.update_item_property(&item_id, &property_id, &value).map_err(|e| e.to_string()) }
 #[tauri::command]
 pub fn get_views(db: State<'_, Database>, database_id: String) -> Result<Vec<DBView>, String> { db.get_views(&database_id).map_err(|e| e.to_string()) }
@@ -111,13 +113,13 @@ pub struct StreamChunk {
 
 #[tauri::command]
 pub async fn proxy_ai_request_stream(
+    client: State<'_, reqwest::Client>,
     url: String,
     method: String,
     headers: HashMap<String, String>,
     body: Option<String>,
     on_event: tauri::ipc::Channel<StreamChunk>,
 ) -> Result<(), String> {
-    let client = reqwest::Client::new();
     let mut req = client.request(
         method.parse().map_err(|e| format!("Invalid HTTP method: {}", e))?,
         &url,

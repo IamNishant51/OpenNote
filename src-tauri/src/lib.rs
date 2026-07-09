@@ -2,6 +2,7 @@ mod commands;
 mod db;
 
 use db::Database;
+use reqwest::Client;
 use tauri::Manager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -14,6 +15,8 @@ pub fn run() {
             let db_path = app_dir.join("opennotes.db");
             let database = Database::new(db_path.to_str().unwrap()).expect("Failed to initialize database");
             app.manage(database);
+            let client = Client::builder().timeout(std::time::Duration::from_secs(60)).build().unwrap();
+            app.manage(client);
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -24,7 +27,7 @@ pub fn run() {
             commands::get_database, commands::get_properties, commands::create_property,
             commands::update_property, commands::delete_property, commands::get_items,
             commands::create_item, commands::update_item, commands::delete_item,
-            commands::get_item_properties, commands::update_item_property, commands::get_views,
+            commands::get_item_properties, commands::get_item_properties_batch, commands::update_item_property, commands::get_views,
             commands::get_comments, commands::create_comment, commands::resolve_comment,
             commands::delete_comment, commands::get_page_versions, commands::create_page_version,
             commands::get_templates, commands::create_template, commands::seed_templates,
