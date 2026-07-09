@@ -1,5 +1,6 @@
 use crate::db::{Database, Page, Workspace, Database_, DBProperty, DBItem, DBItemProperty, DBView, Comment, PageVersion, Template, Share, Notification_};
 use tauri::State;
+use std::collections::HashMap;
 
 #[tauri::command]
 pub fn get_workspaces(db: State<'_, Database>) -> Result<Vec<Workspace>, String> { db.get_workspaces().map_err(|e| e.to_string()) }
@@ -101,3 +102,40 @@ pub fn get_document_state(db: State<'_, Database>, page_id: String) -> Result<Op
 
 #[tauri::command]
 pub fn save_document_state(db: State<'_, Database>, page_id: String, blob: Vec<u8>) -> Result<(), String> { db.save_document_state(&page_id, &blob).map_err(|e| e.to_string()) }
+
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct ProxyResponse {
+    pub status: u16,
+    pub headers: HashMap<String, String>,
+    pub body: String,
+}
+
+#[tauri::command]
+pub async fn proxy_ai_request(
+    url: String,
+    method: String,
+    headers: HashMap<String, String>,
+    body: Option<String>,
+) -> Result<ProxyResponse, String> {
+    let client = reqwest::Client::new();
+    let mut req = client.request(
+        method.parse().map_err(|e| format!("Invalid HTTP method: {}", e))?,
+        &url,
+    );
+    for (k, v) in &headers {
+        let kl = k.to_lowercase();
+        if kl != "host" && kl != "origin" {
+            req = req.header(k.as_str(), v.as_str());
+        }
+    }
+    if let Some(b) = body {
+        req = req.body(b);
+    }
+    let resp = req.send().await.map_err(|e| format!("Proxy request failed: {}", e))?;
+    let status = resp.status().as_u16();
+    let resp_headers: HashMap<String, String> = resp.headers().iter()
+        .map(|(k, v)| (k.to_string(), v.to_str().unwrap_or("").to_string()))
+        .collect();
+    let resp_body = resp.text().await.map_err(|e| format!("Failed to read response body: {}", e))?;
+    Ok(ProxyResponse { status, headers: resp_headers, body: resp_body })
+}

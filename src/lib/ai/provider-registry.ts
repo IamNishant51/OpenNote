@@ -1,26 +1,28 @@
 import type { AIProvider, AIModel, ProviderType } from "@/types/ai";
 import { discoverLocalModels } from "./model-discovery";
-import { isTauriRuntime } from "@/lib/tauri";
+import { isTauriRuntime, createTauriFetch } from "@/lib/tauri";
+
+const proxyFetch = isTauriRuntime() ? createTauriFetch() : undefined;
 
 async function getOpenAI(apiKey?: string, baseURL?: string) {
   const { createOpenAI } = await import("@ai-sdk/openai");
-  return createOpenAI({ apiKey: apiKey || "", baseURL });
+  return createOpenAI({ apiKey: apiKey || "", baseURL, fetch: proxyFetch });
 }
 async function getAnthropic(apiKey?: string) {
   const { createAnthropic } = await import("@ai-sdk/anthropic");
-  return createAnthropic({ apiKey: apiKey || "" });
+  return createAnthropic({ apiKey: apiKey || "", fetch: proxyFetch });
 }
 async function getGoogle(apiKey?: string) {
   const { createGoogleGenerativeAI } = await import("@ai-sdk/google");
-  return createGoogleGenerativeAI({ apiKey: apiKey || "" });
+  return createGoogleGenerativeAI({ apiKey: apiKey || "", fetch: proxyFetch });
 }
 async function getMistral(apiKey?: string) {
   const { createMistral } = await import("@ai-sdk/mistral");
-  return createMistral({ apiKey: apiKey || "" });
+  return createMistral({ apiKey: apiKey || "", fetch: proxyFetch });
 }
 async function getDeepseek(apiKey?: string) {
   const { createDeepSeek } = await import("@ai-sdk/deepseek");
-  return createDeepSeek({ apiKey: apiKey || "" });
+  return createDeepSeek({ apiKey: apiKey || "", fetch: proxyFetch });
 }
 
 
