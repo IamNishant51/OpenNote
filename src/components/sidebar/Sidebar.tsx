@@ -219,6 +219,8 @@ export function Sidebar() {
   const { setQuickFindOpen, setImportDialogOpen, setExportDialogOpen, setTemplatesGalleryOpen } = useUIStore();
   const { createPage, loadPage, loadTrashedPages, trashPage, toggleFavorite } =
     useTauriCommands();
+  const panelOpen = useAIStore(s => s.panelOpen);
+  const setAIPanelOpen = useAIStore(s => s.setPanelOpen);
 
   const rootPages = pages.filter((p) => !p.parent_id);
   const favoritePages = pages.filter((p) => p.is_favorite && !p.is_trash);
@@ -351,10 +353,10 @@ export function Sidebar() {
 
       <div className="border-t border-hairline px-2 py-1.5 space-y-0.5">
         <button
-          onClick={() => useAIStore.getState().setPanelOpen(!useAIStore.getState().panelOpen)}
+          onClick={() => setAIPanelOpen(!panelOpen)}
           className={cn(
             "flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm transition-colors",
-            useAIStore.getState().panelOpen
+            panelOpen
               ? "bg-primary/10 text-primary"
               : "text-ink-muted hover:bg-sidebar-hover",
           )}

@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Send, Loader2, Bot, User, Sparkles, X, Settings, Trash2, Copy, Check } from "lucide-react";
 import { useAIStore } from "@/stores/ai";
 import { useWorkspaceStore } from "@/stores/workspace";
+import { useToastStore } from "@/stores/toast";
 import { createProviderModel } from "@/lib/ai/provider-registry";
 import { streamText, tool, jsonSchema } from "ai";
 import { editorRef } from "@/lib/editorRef";
@@ -123,6 +124,7 @@ function buildSystemPrompt(pageTitle?: string, pageContent?: string, actionType?
 
 export function AiPanel() {
   const { providers, selectedProviderId, selectedModelId, chatMessages, addChatMessage, clearChat, setPanelOpen, setSettingsOpen, customAgents } = useAIStore();
+  const addToast = useToastStore(s => s.addToast);
   const currentPage = useWorkspaceStore(s => s.currentPage);
   const [input, setInput] = useState("");
   const [showCommands, setShowCommands] = useState(false);
@@ -310,6 +312,7 @@ export function AiPanel() {
     } catch (e) {
       const errMsg = e instanceof Error ? e.message : "AI request failed";
       setStreamingContent(`Error: ${errMsg}`);
+      addToast({ type: "error", message: `AI: ${errMsg}` });
       console.error("[AiPanel] sendMessage error:", e);
     } finally {
       setStreaming(false);
@@ -317,7 +320,7 @@ export function AiPanel() {
       clearInterval(timer);
       setElapsed(0);
     }
-  }, [hasProvider, streaming, selectedProvider, selectedModelId, chatMessages, addChatMessage, getContext, insertToPage, searchWeb, searchYouTube, setElapsed, selectedAgent]);
+  }, [hasProvider, streaming, selectedProvider, selectedModelId, chatMessages, addChatMessage, getContext, insertToPage, searchWeb, searchYouTube, setElapsed, selectedAgent, addToast]);
 
   const handleSend = useCallback(() => {
     const { actionType, prompt } = parseInput(input);

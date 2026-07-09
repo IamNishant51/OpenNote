@@ -8,6 +8,7 @@ import { useTauriCommands } from "@/hooks/useTauriCommands";
 import { DatabaseView } from "@/components/database/DatabaseView";
 import { editorRef } from "@/lib/editorRef";
 import { PageIcon } from "@/components/shared/PageIcon";
+import { EmojiPicker } from "@/components/shared/EmojiPicker";
 import type { Page } from "@/types";
 import { Breadcrumbs } from "./Breadcrumbs";
 
@@ -23,19 +24,16 @@ function PageHeader({ page }: { page: Page }) {
     savePage(page.id, val, page.icon, page.font as "default" | "serif" | "mono", page.width as "default" | "full", page.is_favorite);
   }, [page.id, page.icon, page.font, page.width, page.is_favorite, savePage]);
 
-  const handleIconChange = useCallback(() => {
-    const icons = ["PAGE", "NOTE", "IDEA", "TASK", "PLAN", "DOC", "LIST", "BOARD", "CHART", "LINK"];
-    const current = icons.indexOf(page.icon.toUpperCase());
-    const next = icons[(current + 1) % icons.length];
-    savePage(page.id, title, next, page.font as "default" | "serif" | "mono", page.width as "default" | "full", page.is_favorite);
-  }, [page.id, title, page.icon, page.font, page.width, page.is_favorite, savePage]);
+  const handleIconChange = useCallback((icon: string) => {
+    savePage(page.id, title, icon, page.font as "default" | "serif" | "mono", page.width as "default" | "full", page.is_favorite);
+  }, [page.id, title, page.font, page.width, page.is_favorite, savePage]);
 
   return (
     <div className="mb-6">
       <div className="flex items-center justify-between">
-        <button onClick={handleIconChange} className="mb-2 transition-transform hover:scale-105 cursor-pointer">
-          <PageIcon icon={page.icon} size="lg" />
-        </button>
+        <div className="mb-2">
+          <EmojiPicker value={page.icon || "📄"} onChange={handleIconChange} />
+        </div>
         <button onClick={() => toggleFavorite(page.id)}
           className={`text-sm transition-colors ${page.is_favorite ? "text-yellow-500" : "text-ink-faint hover:text-ink-muted"}`}
         >{page.is_favorite ? "★" : "☆"}</button>
@@ -63,28 +61,29 @@ export function BlockEditor({ pageId, onEditorReady, ydoc, initialContent }: Blo
   const pageIdRef = useRef(pageId);
   pageIdRef.current = pageId;
 
-  // Track if initial content has been loaded into editor
   const initialContentLoaded = useRef(false);
 
   const options = useMemo(() => ({
-    initialContent: initialContent || [
-      { type: "heading", content: "Welcome to OpenNotes", props: { level: 1 }, children: [] },
-      { type: "paragraph", content: "Start typing here...", children: [] }
-    ],
     ...(ydoc ? { collaboration: { fragment: ydoc.getXmlFragment("blocknote"), user: { name: "Me", color: "#0075de" } } } : {}),
-  }), [ydoc, initialContent]);
+  }), [ydoc]);
 
   const editor = useCreateBlockNote(options, [ydoc]);
 
-  // Load initial content into editor when it becomes available (from Yjs sync)
   useEffect(() => {
-    if (editor && initialContent && !initialContentLoaded.current) {
+    if (!editor) return;
+    if (initialContent && !initialContentLoaded.current) {
       try {
         editor.replaceBlocks(editor.document, initialContent);
         initialContentLoaded.current = true;
       } catch (e) {
         console.error("Failed to load initial content:", e);
       }
+    } else if (!initialContent && editor.document.length <= 1) {
+      const welcome: any[] = [
+        { type: "heading", content: "Welcome to OpenNotes", props: { level: 1 }, children: [] },
+        { type: "paragraph", content: "Start typing here...", children: [] },
+      ];
+      editor.replaceBlocks(editor.document, welcome);
     }
   }, [editor, initialContent]);
 
