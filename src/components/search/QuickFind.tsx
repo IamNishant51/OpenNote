@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Search, FileText, Trash2 } from "lucide-react";
+import { Search, FileText, Plus } from "lucide-react";
 import { useWorkspaceStore } from "@/stores/workspace";
 import { useUIStore } from "@/stores/ui";
 import { useTauriCommands } from "@/hooks/useTauriCommands";
@@ -13,8 +13,6 @@ export function QuickFind() {
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Store quickFindOpen in a ref so the keydown handler always has the latest value
-  // without needing to be in the effect deps (which caused re-registration on every toggle)
   const quickFindOpenRef = useRef(quickFindOpen);
   quickFindOpenRef.current = quickFindOpen;
 
@@ -31,7 +29,7 @@ export function QuickFind() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // ← Register once; use ref for latest quickFindOpen value
+  }, []);
 
   useEffect(() => {
     if (quickFindOpen) {
@@ -55,11 +53,11 @@ export function QuickFind() {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh] bg-black/30"
+      className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh] bg-black/20"
       onClick={() => setQuickFindOpen(false)}
     >
       <div
-        className="w-full max-w-[640px] rounded-xl bg-white shadow-elevated border border-hairline overflow-hidden"
+        className="w-full max-w-[640px] rounded-xl bg-canvas border border-hairline shadow-elevated overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center gap-3 border-b border-hairline px-4 py-3">
@@ -103,7 +101,7 @@ export function QuickFind() {
             className="flex w-full items-center gap-3 border-t border-hairline px-4 py-2.5 text-sm text-ink-muted hover:bg-sidebar-hover transition-colors"
           >
             <span className="flex h-5 w-5 items-center justify-center rounded bg-primary/10 text-primary text-xs font-medium">
-              +
+              <Plus className="h-3 w-3" />
             </span>
             <span>
               Create page "<strong>{query}</strong>"

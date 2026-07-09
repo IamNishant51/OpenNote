@@ -114,5 +114,5 @@ export function useYjsSync(pageId: string | null, enabled = false) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pageId, enabled]);
 
-  return { doc: docRef, provider: providerRef, ready, initialContent };
+  return { doc: docRef.current, provider: providerRef.current, ready, initialContent };
 }

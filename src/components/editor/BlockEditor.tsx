@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useRef, useState, useMemo } from "react";
-import { useCreateBlockNote } from "@blocknote/react";
+import { useCreateBlockNote, BlockNoteViewRaw } from "@blocknote/react";
 import { invoke } from "@tauri-apps/api/core";
-import { BlockNoteView } from "@blocknote/mantine";
-import "@blocknote/mantine/style.css";
 import * as Y from "yjs";
 import { useWorkspaceStore } from "@/stores/workspace";
 import { useUIStore } from "@/stores/ui";
@@ -65,20 +63,30 @@ export function BlockEditor({ pageId, onEditorReady, ydoc, initialContent }: Blo
   const pageIdRef = useRef(pageId);
   pageIdRef.current = pageId;
 
-  // Freeze initialContent at mount — never changes after component mounts
-  const frozenInitialContent = useRef(
-    initialContent || [
-      { type: "heading", content: "Welcome to OpenNotes", props: { level: 1 }, children: [] },
-      { type: "paragraph", content: "Start typing here...", children: [] }
-    ]
-  );
+  // Track if initial content has been loaded into editor
+  const initialContentLoaded = useRef(false);
 
   const options = useMemo(() => ({
-    initialContent: frozenInitialContent.current,
+    initialContent: initialContent || [
+      { type: "heading", content: "Welcome to OpenNotes", props: { level: 1 }, children: [] },
+      { type: "paragraph", content: "Start typing here...", children: [] }
+    ],
     ...(ydoc ? { collaboration: { fragment: ydoc.getXmlFragment("blocknote"), user: { name: "Me", color: "#0075de" } } } : {}),
-  }), [ydoc]);
+  }), [ydoc, initialContent]);
 
   const editor = useCreateBlockNote(options, [ydoc]);
+
+  // Load initial content into editor when it becomes available (from Yjs sync)
+  useEffect(() => {
+    if (editor && initialContent && !initialContentLoaded.current) {
+      try {
+        editor.replaceBlocks(editor.document, initialContent);
+        initialContentLoaded.current = true;
+      } catch (e) {
+        console.error("Failed to load initial content:", e);
+      }
+    }
+  }, [editor, initialContent]);
 
   // Apply pending template content
   useEffect(() => {
@@ -141,7 +149,7 @@ export function BlockEditor({ pageId, onEditorReady, ydoc, initialContent }: Blo
     <div className="mx-auto h-full max-w-[900px] px-16 py-8 overflow-y-auto">
       <Breadcrumbs />
       <PageHeader page={currentPage} />
-      <BlockNoteView editor={editor as any} theme={darkMode ? "dark" : "light"} />
+      <BlockNoteViewRaw editor={editor as any} theme={darkMode ? "dark" : "light"} />
     </div>
   );
 }

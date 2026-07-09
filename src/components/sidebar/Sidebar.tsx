@@ -1,7 +1,7 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef, useCallback } from "react";
 import {
   ChevronRight, ChevronDown, Plus, Star, Trash2, Search,
-  Sidebar as SidebarIcon, FileText, MoreHorizontal,
+  Sidebar as SidebarIcon, FileText, MoreHorizontal, Pencil, Undo2,
   Upload, Download, Sparkles, Table2, LayoutTemplate,
 } from "lucide-react";
 import { useWorkspaceStore } from "@/stores/workspace";
@@ -24,48 +24,148 @@ function PageTreeItem({
   const currentPage = useWorkspaceStore(s => s.currentPage);
   const pages = useWorkspaceStore(s => s.pages);
   const [expanded, setExpanded] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [renaming, setRenaming] = useState(false);
+  const [renameValue, setRenameValue] = useState(page.title);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const { trashPage, toggleFavorite, savePage, restorePage, deletePagePermanently } = useTauriCommands();
+
   const children = useMemo(
     () => pages.filter((p) => p.parent_id === page.id),
     [pages, page.id],
   );
 
+  const handleRename = useCallback(async () => {
+    const title = renameValue.trim() || "Untitled";
+    await savePage(page.id, title, page.icon, page.font, page.width, page.is_favorite);
+    setRenaming(false);
+  }, [renameValue, page.id, savePage]);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    if (menuOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [menuOpen]);
+
+  const isTrash = page.is_trash;
+
   return (
     <div>
-      <button
-        onClick={() => onSelect(page.id)}
-        onContextMenu={(e) => e.preventDefault()}
-        className={cn(
-          "group flex w-full items-center gap-1 rounded-sm px-2 py-1 text-sm transition-colors",
-          "hover:bg-sidebar-hover",
-          currentPage?.id === page.id
-            ? "bg-sidebar-active text-ink"
-            : "text-sidebar-text",
-        )}
+      <div className="group relative flex w-full items-center rounded-sm text-sm transition-colors hover:bg-sidebar-hover"
         style={{ paddingLeft: `${12 + depth * 16}px` }}
       >
-        {children.length > 0 ? (
-          <span
-            onClick={(e) => {
-              e.stopPropagation();
-              setExpanded(!expanded);
-            }}
-            className="flex h-4 w-4 items-center justify-center"
-          >
-            {expanded ? (
-              <ChevronDown className="h-3 w-3" />
-            ) : (
-              <ChevronRight className="h-3 w-3" />
+        <div className="flex items-center gap-1 flex-1 min-w-0">
+          {children.length > 0 ? (
+            <span
+              onClick={(e) => {
+                e.stopPropagation();
+                setExpanded(!expanded);
+              }}
+              className="flex h-4 w-4 items-center justify-center flex-shrink-0"
+            >
+              {expanded ? (
+                <ChevronDown className="h-3 w-3" />
+              ) : (
+                <ChevronRight className="h-3 w-3" />
+              )}
+            </span>
+          ) : (
+            <span className="w-4 flex-shrink-0" />
+          )}
+          <button
+            onClick={() => onSelect(page.id)}
+            onContextMenu={(e) => e.preventDefault()}
+            className={cn(
+              "flex items-center gap-1 flex-1 min-w-0 py-1 text-left",
+              currentPage?.id === page.id
+                ? "bg-sidebar-active text-ink"
+                : "text-sidebar-text",
             )}
-          </span>
-        ) : (
-          <span className="w-4" />
-        )}
-        <PageIcon icon={page.icon} size="sm" className="flex-shrink-0" />
-        <span className="truncate flex-1 text-left">{page.title || "Untitled"}</span>
-        <span className="hidden group-hover:flex items-center ml-auto">
-          <MoreHorizontal className="h-3.5 w-3.5 text-ink-faint" />
+          >
+            <PageIcon icon={page.icon} size="sm" className="flex-shrink-0" />
+            {renaming ? (
+              <input
+                autoFocus
+                value={renameValue}
+                onChange={(e) => setRenameValue(e.target.value)}
+                onBlur={handleRename}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleRename();
+                  if (e.key === "Escape") setRenaming(false);
+                }}
+                className="flex-1 min-w-0 bg-transparent border-b border-primary outline-none text-sm px-0 py-0"
+                onClick={(e) => e.stopPropagation()}
+              />
+            ) : (
+              <span className="truncate flex-1">{page.title || "Untitled"}</span>
+            )}
+          </button>
+        </div>
+        <span className="hidden group-hover:flex items-center ml-0.5 flex-shrink-0">
+          <button
+            onClick={(e) => { e.stopPropagation(); setMenuOpen(!menuOpen); }}
+            className="flex h-6 w-6 items-center justify-center rounded hover:bg-sidebar-hover"
+          >
+            <MoreHorizontal className="h-3.5 w-3.5 text-ink-faint" />
+          </button>
         </span>
-      </button>
+        {menuOpen && (
+          <div
+            ref={menuRef}
+            className="absolute right-0 top-full z-50 mt-1 w-44 rounded-lg border border-hairline bg-canvas shadow-elevated py-1"
+          >
+            {isTrash ? (
+              <>
+                <button
+                  onClick={async (e) => { e.stopPropagation(); await restorePage(page.id); setMenuOpen(false); }}
+                  className="flex w-full items-center gap-2 px-3 py-1.5 text-sm text-ink hover:bg-sidebar-hover"
+                >
+                  <Undo2 className="h-3.5 w-3.5 text-ink-muted" />
+                  Restore
+                </button>
+                <button
+                  onClick={async (e) => { e.stopPropagation(); await deletePagePermanently(page.id); setMenuOpen(false); }}
+                  className="flex w-full items-center gap-2 px-3 py-1.5 text-sm text-red-600 hover:bg-sidebar-hover"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Delete Permanently
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={(e) => { e.stopPropagation(); toggleFavorite(page.id); setMenuOpen(false); }}
+                  className="flex w-full items-center gap-2 px-3 py-1.5 text-sm text-ink hover:bg-sidebar-hover"
+                >
+                  <Star className={cn("h-3.5 w-3.5", page.is_favorite && "fill-yellow-500 text-yellow-500")} />
+                  {page.is_favorite ? "Remove from Favorites" : "Add to Favorites"}
+                </button>
+                <div className="border-t border-hairline my-1" />
+                <button
+                  onClick={(e) => { e.stopPropagation(); setRenameValue(page.title); setRenaming(true); setMenuOpen(false); }}
+                  className="flex w-full items-center gap-2 px-3 py-1.5 text-sm text-ink hover:bg-sidebar-hover"
+                >
+                  <Pencil className="h-3.5 w-3.5 text-ink-muted" />
+                  Rename
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); trashPage(page.id); setMenuOpen(false); }}
+                  className="flex w-full items-center gap-2 px-3 py-1.5 text-sm text-red-600 hover:bg-sidebar-hover"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Move to Trash
+                </button>
+              </>
+            )}
+          </div>
+        )}
+      </div>
       {expanded &&
         children.map((child) => (
           <PageTreeItem

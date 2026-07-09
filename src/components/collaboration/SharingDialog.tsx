@@ -44,7 +44,7 @@ export function SharingDialog({ pageId, open, onClose }: SharingDialogProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20" onClick={onClose}>
-      <div className="w-[420px] rounded-lg bg-canvas shadow-xl border border-hairline" onClick={(e) => e.stopPropagation()}>
+      <div className="w-[420px] rounded-xl bg-canvas shadow-elevated border border-hairline" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-4 py-3 border-b border-hairline">
           <div className="flex items-center gap-2">
             <Globe className="h-4 w-4 text-ink-muted" />

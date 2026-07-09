@@ -56,11 +56,18 @@ export const useAIStore = create<AIStore>((set, get) => ({
   setSettingsOpen: (open) => set({ settingsOpen: open, panelOpen: false }),
   setProviders: (providers) => set({ providers }),
   updateProvider: (id, updates) =>
-    set((state) => ({
-      providers: state.providers.map((p) =>
+    set((state) => {
+      const newProviders = state.providers.map((p) =>
         p.id === id ? { ...p, ...updates } : p,
-      ),
-    })),
+      );
+      // Persist API keys to localStorage
+      const keys: Record<string, { apiKey?: string }> = {};
+      for (const p of newProviders) {
+        if (p.apiKey) keys[p.id] = { apiKey: p.apiKey };
+      }
+      localStorage.setItem("opennotes_provider_keys", JSON.stringify(keys));
+      return { providers: newProviders };
+    }),
   setModels: (models) => set({ models }),
   setSelectedProvider: (id) => {
     const provider = get().providers.find((p) => p.id === id);
@@ -85,12 +92,41 @@ export const useAIStore = create<AIStore>((set, get) => ({
   removeCustomAgent: (id) => set((s) => ({ customAgents: s.customAgents.filter(a => a.id !== id) })),
   initializeProviders: async () => {
     const defaults = getDefaultProviders();
+    
+    // Load persisted API keys and enabled state from localStorage
+    const savedKeys = localStorage.getItem("opennotes_provider_keys");
+    if (savedKeys) {
+      try {
+        const keys = JSON.parse(savedKeys);
+        for (const provider of defaults) {
+          const saved = keys[provider.id];
+          if (saved?.apiKey) {
+            provider.apiKey = saved.apiKey;
+            provider.enabled = true;
+          }
+        }
+      } catch { /* ignore parse errors */ }
+    }
 
-    const localModels = await discoverProviderModels(defaults[2]);
-    defaults[2].models = localModels.filter((m) => m.providerId === "ollama");
+    try {
+      const localModels = await discoverProviderModels(defaults[2]);
+      defaults[2].models = localModels.filter((m) => m.providerId === "ollama");
+    } catch {}
 
-    const lmStudioModels = await discoverProviderModels(defaults[3]);
-    defaults[3].models = lmStudioModels.filter((m) => m.providerId === "lmstudio");
+    try {
+      const lmStudioModels = await discoverProviderModels(defaults[3]);
+      defaults[3].models = lmStudioModels.filter((m) => m.providerId === "lmstudio");
+    } catch {}
+
+    try {
+      const nvidiaModels = await discoverProviderModels(defaults[4]);
+      defaults[4].models = nvidiaModels;
+    } catch {}
+
+    try {
+      const groqModels = await discoverProviderModels(defaults[5]);
+      defaults[5].models = groqModels;
+    } catch {}
 
     const enabled = defaults.filter((p) => p.enabled || p.apiKey);
     set({ providers: defaults });
@@ -116,9 +152,15 @@ export const useAIStore = create<AIStore>((set, get) => ({
   discoverModels: async () => {
     set({ discovering: true });
     try {
-      for (const provider of get().providers) {
-        const models = await discoverProviderModels(provider);
-        get().updateProvider(provider.id, { models });
+      const providers = get().providers;
+      const localProviders = providers.filter(p => p.type === "ollama" || p.type === "lmstudio");
+      for (const provider of localProviders) {
+        try {
+          const models = await discoverProviderModels(provider);
+          if (models.length > 0) {
+            get().updateProvider(provider.id, { models });
+          }
+        } catch { /* skip failed discovery */ }
       }
       const all = get().providers.flatMap((p) => p.models);
       set({ models: all });

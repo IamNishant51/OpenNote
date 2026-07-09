@@ -1,20 +1,24 @@
 import { ArrowLeft, X, Loader2 } from "lucide-react";
 import { useWorkspaceStore } from "@/stores/workspace";
 import { useTauriCommands } from "@/hooks/useTauriCommands";
-import { useEffect, useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
-import * as Y from "yjs";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { safeInvoke } from "@/lib/tauri";
 import { PageIcon } from "@/components/shared/PageIcon";
 import type { Page } from "@/types";
+
+const docCache = new Map<string, string>();
 
 export function BacklinksPanel({ pageId, open, onClose }: { pageId: string; open: boolean; onClose: () => void }) {
   const { pages } = useWorkspaceStore();
   const { loadPage } = useTauriCommands();
   const [backlinks, setBacklinks] = useState<Page[]>([]);
   const [loading, setLoading] = useState(false);
+  const cancelledRef = useRef(false);
 
   useEffect(() => {
     if (!open || !pageId) return;
+
+    cancelledRef.current = false;
 
     const findBacklinks = async () => {
       setLoading(true);
@@ -22,30 +26,43 @@ export function BacklinksPanel({ pageId, open, onClose }: { pageId: string; open
         const results: Page[] = [];
         const otherPages = pages.filter((p) => p.id !== pageId && !p.is_trash);
 
-        for (const p of otherPages) {
-          try {
-            const stateArray = await invoke<number[] | null>("get_document_state", { pageId: p.id });
-            if (stateArray && stateArray.length > 0) {
-              const doc = new Y.Doc();
-              Y.applyUpdate(doc, new Uint8Array(stateArray));
-              const xml = doc.getXmlFragment("blocknote").toString();
-              if (xml.includes(pageId)) {
-                results.push(p);
+        const batchSize = 5;
+        for (let i = 0; i < otherPages.length; i += batchSize) {
+          if (cancelledRef.current) return;
+          const batch = otherPages.slice(i, i + batchSize);
+          const promises = batch.map(async (p) => {
+            if (cancelledRef.current) return null;
+            try {
+              let content: string | null = null;
+              if (docCache.has(p.id)) {
+                content = docCache.get(p.id) ?? null;
+              } else {
+                const stateArray = await safeInvoke<number[] | null>("get_document_state", { pageId: p.id }, null);
+                if (stateArray && stateArray.length > 0) {
+                  content = new TextDecoder("utf-8").decode(new Uint8Array(stateArray));
+                  docCache.set(p.id, content);
+                }
               }
-            }
-          } catch (err) {
-            console.error(`Failed to scan page ${p.id} for backlinks:`, err);
+              if (content && content.includes(pageId)) return p;
+            } catch { /* skip */ }
+            return null;
+          });
+          const batchResults = await Promise.all(promises);
+          for (const r of batchResults) {
+            if (r) results.push(r);
           }
         }
-        setBacklinks(results);
+
+        if (!cancelledRef.current) setBacklinks(results);
       } catch (e) {
         console.error("Failed to find backlinks:", e);
       } finally {
-        setLoading(false);
+        if (!cancelledRef.current) setLoading(false);
       }
     };
 
     findBacklinks();
+    return () => { cancelledRef.current = true; };
   }, [open, pageId, pages]);
 
   if (!open) return null;

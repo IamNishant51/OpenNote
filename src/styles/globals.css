@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "@blocknote/core/style.css";
+@import "@blocknote/react/style.css";
 
 @theme {
   --color-primary: #0075de;
@@ -94,6 +95,15 @@
 
   ::selection {
     background: #0075de33;
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-hairline) transparent;
+  }
+
+  input, textarea, select, button {
+    font-family: inherit;
   }
 }
 

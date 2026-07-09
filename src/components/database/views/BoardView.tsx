@@ -3,6 +3,13 @@ import { Plus } from "lucide-react";
 import { useDBStore } from "@/stores/database";
 import { useDatabase } from "@/hooks/useDatabase";
 import { cn } from "@/lib/utils";
+import type { DBItem, DBProperty, DBItemProperty } from "@/types/database";
+
+interface BoardViewProps {
+  filteredItems: DBItem[];
+  properties: DBProperty[];
+  itemProperties: Record<string, DBItemProperty[]>;
+}
 
 const groupColors: Record<string, string> = {
   gray: "bg-gray-100", red: "bg-red-50", orange: "bg-orange-50",
@@ -10,20 +17,19 @@ const groupColors: Record<string, string> = {
   blue: "bg-blue-50", purple: "bg-purple-50", pink: "bg-pink-50",
 };
 
-export function BoardView() {
-  const { properties, items, itemProperties } = useDBStore();
+export function BoardView({ filteredItems, properties, itemProperties }: BoardViewProps) {
   const { addItem } = useDatabase();
 
   const statusProp = properties.find((p) => p.prop_type === "select" || p.prop_type === "status");
   let options: { name: string; color: string }[] = [];
-  try { if (statusProp) options = JSON.parse(statusProp.options || "[]"); } catch {}
+  try { if (statusProp) { const parsed = JSON.parse(statusProp.options || "[]"); options = Array.isArray(parsed) ? parsed : []; } } catch {}
 
   const groups = useMemo(() => {
-    const map: Record<string, typeof items> = {};
+    const map: Record<string, typeof filteredItems> = {};
     for (const opt of options) map[opt.name] = [];
     map["No Status"] = [];
 
-    for (const item of items) {
+    for (const item of filteredItems) {
       const props = itemProperties[item.id] || [];
       const cell = props.find((p) => p.property_id === statusProp?.id);
       const val = cell?.value || "";
@@ -32,7 +38,7 @@ export function BoardView() {
     }
     if (map["No Status"]?.length === 0) delete map["No Status"];
     return map;
-  }, [items, itemProperties, statusProp, options]);
+  }, [filteredItems, itemProperties, statusProp, options]);
 
   return (
     <div className="flex h-full gap-3 overflow-x-auto p-4">

@@ -1,4 +1,4 @@
-export type ProviderType = "openai" | "anthropic" | "google" | "mistral" | "deepseek" | "ollama" | "lmstudio" | "custom";
+export type ProviderType = "openai" | "anthropic" | "google" | "mistral" | "deepseek" | "ollama" | "lmstudio" | "nvidia" | "groq" | "custom";
 
 export interface AIProvider {
   id: string;

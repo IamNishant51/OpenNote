@@ -3,9 +3,15 @@ import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { useDBStore } from "@/stores/database";
 import { useDatabase } from "@/hooks/useDatabase";
 import { cn } from "@/lib/utils";
+import type { DBItem, DBProperty, DBItemProperty } from "@/types/database";
 
-export function CalendarView() {
-  const { items, itemProperties, properties } = useDBStore();
+interface CalendarViewProps {
+  filteredItems: DBItem[];
+  properties: DBProperty[];
+  itemProperties: Record<string, DBItemProperty[]>;
+}
+
+export function CalendarView({ filteredItems, properties, itemProperties }: CalendarViewProps) {
   const { addItem } = useDatabase();
   const [currentDate, setCurrentDate] = useState(() => new Date());
 
@@ -18,9 +24,9 @@ export function CalendarView() {
 
   const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-  const itemsByDate: Record<string, typeof items> = useMemo(() => {
-    const map: Record<string, typeof items> = {};
-    for (const item of items) {
+  const itemsByDate: Record<string, typeof filteredItems> = useMemo(() => {
+    const map: Record<string, typeof filteredItems> = {};
+    for (const item of filteredItems) {
       const props = itemProperties[item.id] || [];
       const cell = props.find((p) => p.property_id === dateProp?.id);
       const date = cell?.value || "";
@@ -30,7 +36,7 @@ export function CalendarView() {
       }
     }
     return map;
-  }, [items, itemProperties, dateProp]);
+  }, [filteredItems, itemProperties, dateProp]);
 
   const prevMonth = () => setCurrentDate(new Date(year, month - 1, 1));
   const nextMonth = () => setCurrentDate(new Date(year, month + 1, 1));
@@ -52,7 +58,7 @@ export function CalendarView() {
 
       <div className="grid grid-cols-7 border border-hairline rounded-lg overflow-hidden flex-1">
         {dayNames.map((d) => (
-          <div key={d} className="border-b border-r border-hairline last:border-r-0 px-2 py-1.5 text-xs font-medium text-ink-muted uppercase">
+          <div key={d} className="border-b border-r border-hairline last:border-r-0 px-2 py-1.5 text-eyebrow text-ink-muted uppercase">
             {d}
           </div>
         ))}

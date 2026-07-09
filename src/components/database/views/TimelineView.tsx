@@ -1,22 +1,27 @@
 import { useMemo } from "react";
 import { Plus } from "lucide-react";
-import { useDBStore } from "@/stores/database";
 import { useDatabase } from "@/hooks/useDatabase";
+import type { DBItem, DBProperty, DBItemProperty } from "@/types/database";
 
-export function TimelineView() {
-  const { items, itemProperties, properties } = useDBStore();
+interface TimelineViewProps {
+  filteredItems: DBItem[];
+  properties: DBProperty[];
+  itemProperties: Record<string, DBItemProperty[]>;
+}
+
+export function TimelineView({ filteredItems, properties, itemProperties }: TimelineViewProps) {
   const { addItem } = useDatabase();
   const dateProp = properties.find((p) => p.prop_type === "date");
 
   const sorted = useMemo(() => {
-    return [...items].sort((a, b) => {
+    return [...filteredItems].sort((a, b) => {
       const aProps = itemProperties[a.id] || [];
       const bProps = itemProperties[b.id] || [];
       const aVal = aProps.find((p) => p.property_id === dateProp?.id)?.value || "";
       const bVal = bProps.find((p) => p.property_id === dateProp?.id)?.value || "";
       return aVal.localeCompare(bVal);
     });
-  }, [items, itemProperties, dateProp]);
+  }, [filteredItems, itemProperties, dateProp]);
 
   return (
     <div className="h-full overflow-y-auto p-4">

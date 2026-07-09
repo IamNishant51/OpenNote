@@ -41,7 +41,7 @@ export function AiSettings({ open, onClose }: { open: boolean; onClose: () => vo
       onClick={onClose}
     >
       <div
-        className="w-[min(92vw,880px)] rounded-2xl bg-canvas shadow-elevated border border-hairline overflow-hidden max-h-[86vh] flex flex-col"
+        className="w-[min(92vw,880px)] rounded-xl bg-canvas shadow-elevated border border-hairline overflow-hidden max-h-[86vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-5 py-4 border-b border-hairline flex-shrink-0 bg-canvas-soft/60">

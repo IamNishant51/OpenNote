@@ -73,7 +73,7 @@ export function AgentsPanel({ open, onClose }: AgentsPanelProps) {
             </div>
           </div>
         ) : (
-          <button onClick={() => setEditing(null)} className="w-full p-3 text-left hover:bg-sidebar-hover border-b border-hairline flex items-center gap-2">
+          <button onClick={() => setEditing({} as CustomAgent)} className="w-full p-3 text-left hover:bg-sidebar-hover border-b border-hairline flex items-center gap-2">
             <Plus className="h-4 w-4 text-ink-muted" /><span className="text-sm text-ink-muted">Create new agent</span>
           </button>
         )}

@@ -102,24 +102,23 @@ impl Database {
 CREATE TABLE IF NOT EXISTS document_states (page_id TEXT PRIMARY KEY, yjs_blob BLOB, updated_at TEXT NOT NULL DEFAULT (datetime('now')), FOREIGN KEY (page_id) REFERENCES pages(id) ON DELETE CASCADE);
               CREATE VIRTUAL TABLE IF NOT EXISTS pages_fts USING fts5(title, content, content='pages', content_rowid='rowid');
               CREATE TABLE IF NOT EXISTS databases (id TEXT PRIMARY KEY, page_id TEXT NOT NULL, title TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL DEFAULT (datetime('now')), updated_at TEXT NOT NULL DEFAULT (datetime('now')), FOREIGN KEY (page_id) REFERENCES pages(id) ON DELETE CASCADE);
-             CREATE TABLE IF NOT EXISTS database_properties (id TEXT PRIMARY KEY, database_id TEXT NOT NULL, name TEXT NOT NULL, prop_type TEXT NOT NULL DEFAULT 'text', options TEXT NOT NULL DEFAULT '{}', sort_order INTEGER NOT NULL DEFAULT 0, FOREIGN KEY (database_id) REFERENCES databases(id) ON DELETE CASCADE);
-             CREATE TABLE IF NOT EXISTS database_items (id TEXT PRIMARY KEY, database_id TEXT NOT NULL, title TEXT NOT NULL DEFAULT '', sort_order REAL NOT NULL DEFAULT 0, created_at TEXT NOT NULL DEFAULT (datetime('now')), updated_at TEXT NOT NULL DEFAULT (datetime('now')), FOREIGN KEY (database_id) REFERENCES databases(id) ON DELETE CASCADE);
-             CREATE TABLE IF NOT EXISTS database_item_properties (id TEXT PRIMARY KEY, item_id TEXT NOT NULL, property_id TEXT NOT NULL, value TEXT NOT NULL DEFAULT '', FOREIGN KEY (item_id) REFERENCES database_items(id) ON DELETE CASCADE, FOREIGN KEY (property_id) REFERENCES database_properties(id) ON DELETE CASCADE);
-             CREATE TABLE IF NOT EXISTS database_views (id TEXT PRIMARY KEY, database_id TEXT NOT NULL, name TEXT NOT NULL, view_type TEXT NOT NULL DEFAULT 'table', config TEXT NOT NULL DEFAULT '{}', sort_order INTEGER NOT NULL DEFAULT 0, FOREIGN KEY (database_id) REFERENCES databases(id) ON DELETE CASCADE);
-             CREATE TABLE IF NOT EXISTS comments (id TEXT PRIMARY KEY, page_id TEXT NOT NULL, parent_id TEXT, block_id TEXT, author TEXT NOT NULL DEFAULT '', content TEXT NOT NULL DEFAULT '', resolved INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL DEFAULT (datetime('now')), updated_at TEXT NOT NULL DEFAULT (datetime('now')), FOREIGN KEY (page_id) REFERENCES pages(id) ON DELETE CASCADE);
-             CREATE TABLE IF NOT EXISTS page_versions (id TEXT PRIMARY KEY, page_id TEXT NOT NULL, title TEXT NOT NULL DEFAULT '', snapshot TEXT NOT NULL DEFAULT '{}', created_at TEXT NOT NULL DEFAULT (datetime('now')), FOREIGN KEY (page_id) REFERENCES pages(id) ON DELETE CASCADE);
-             CREATE TABLE IF NOT EXISTS templates (id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL, name TEXT NOT NULL, icon TEXT NOT NULL DEFAULT '📄', description TEXT NOT NULL DEFAULT '', category TEXT NOT NULL DEFAULT 'general', content TEXT NOT NULL DEFAULT '{}', created_at TEXT NOT NULL DEFAULT (datetime('now')), FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE);
-             CREATE INDEX IF NOT EXISTS idx_pages_workspace ON pages(workspace_id);
-             CREATE INDEX IF NOT EXISTS idx_pages_parent ON pages(parent_id);
-             CREATE INDEX IF NOT EXISTS idx_db_props ON database_properties(database_id);
-             CREATE INDEX IF NOT EXISTS idx_db_items ON database_items(database_id);
-             CREATE INDEX IF NOT EXISTS idx_db_item_props ON database_item_properties(item_id);
-             CREATE TABLE IF NOT EXISTS page_shares (id TEXT PRIMARY KEY, page_id TEXT NOT NULL, user_email TEXT NOT NULL, permission_level TEXT NOT NULL DEFAULT 'edit', created_at TEXT NOT NULL DEFAULT (datetime('now')), FOREIGN KEY (page_id) REFERENCES pages(id) ON DELETE CASCADE, UNIQUE(page_id,user_email));
-             CREATE TABLE IF NOT EXISTS notifications (id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL, type TEXT NOT NULL DEFAULT 'info', title TEXT NOT NULL, message TEXT NOT NULL, page_id TEXT, read INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL DEFAULT (datetime('now')), FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE);
-             CREATE INDEX IF NOT EXISTS idx_shares_page ON page_shares(page_id);
-             CREATE INDEX IF NOT EXISTS idx_notifications_workspace ON notifications(workspace_id);
-             CREATE INDEX IF NOT EXISTS idx_db_views ON database_views(database_id);
-             CREATE VIRTUAL TABLE IF NOT EXISTS pages_fts USING fts5(title, content);"
+              CREATE TABLE IF NOT EXISTS database_properties (id TEXT PRIMARY KEY, database_id TEXT NOT NULL, name TEXT NOT NULL, prop_type TEXT NOT NULL DEFAULT 'text', options TEXT NOT NULL DEFAULT '{}', sort_order INTEGER NOT NULL DEFAULT 0, FOREIGN KEY (database_id) REFERENCES databases(id) ON DELETE CASCADE);
+              CREATE TABLE IF NOT EXISTS database_items (id TEXT PRIMARY KEY, database_id TEXT NOT NULL, title TEXT NOT NULL DEFAULT '', sort_order REAL NOT NULL DEFAULT 0, created_at TEXT NOT NULL DEFAULT (datetime('now')), updated_at TEXT NOT NULL DEFAULT (datetime('now')), FOREIGN KEY (database_id) REFERENCES databases(id) ON DELETE CASCADE);
+              CREATE TABLE IF NOT EXISTS database_item_properties (id TEXT PRIMARY KEY, item_id TEXT NOT NULL, property_id TEXT NOT NULL, value TEXT NOT NULL DEFAULT '', FOREIGN KEY (item_id) REFERENCES database_items(id) ON DELETE CASCADE, FOREIGN KEY (property_id) REFERENCES database_properties(id) ON DELETE CASCADE);
+              CREATE TABLE IF NOT EXISTS database_views (id TEXT PRIMARY KEY, database_id TEXT NOT NULL, name TEXT NOT NULL, view_type TEXT NOT NULL DEFAULT 'table', config TEXT NOT NULL DEFAULT '{}', sort_order INTEGER NOT NULL DEFAULT 0, FOREIGN KEY (database_id) REFERENCES databases(id) ON DELETE CASCADE);
+              CREATE TABLE IF NOT EXISTS comments (id TEXT PRIMARY KEY, page_id TEXT NOT NULL, parent_id TEXT, block_id TEXT, author TEXT NOT NULL DEFAULT '', content TEXT NOT NULL DEFAULT '', resolved INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL DEFAULT (datetime('now')), updated_at TEXT NOT NULL DEFAULT (datetime('now')), FOREIGN KEY (page_id) REFERENCES pages(id) ON DELETE CASCADE);
+              CREATE TABLE IF NOT EXISTS page_versions (id TEXT PRIMARY KEY, page_id TEXT NOT NULL, title TEXT NOT NULL DEFAULT '', snapshot TEXT NOT NULL DEFAULT '{}', created_at TEXT NOT NULL DEFAULT (datetime('now')), FOREIGN KEY (page_id) REFERENCES pages(id) ON DELETE CASCADE);
+              CREATE TABLE IF NOT EXISTS templates (id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL, name TEXT NOT NULL, icon TEXT NOT NULL DEFAULT '📄', description TEXT NOT NULL DEFAULT '', category TEXT NOT NULL DEFAULT 'general', content TEXT NOT NULL DEFAULT '{}', created_at TEXT NOT NULL DEFAULT (datetime('now')), FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE);
+              CREATE INDEX IF NOT EXISTS idx_pages_workspace ON pages(workspace_id);
+              CREATE INDEX IF NOT EXISTS idx_pages_parent ON pages(parent_id);
+              CREATE INDEX IF NOT EXISTS idx_db_props ON database_properties(database_id);
+              CREATE INDEX IF NOT EXISTS idx_db_items ON database_items(database_id);
+              CREATE INDEX IF NOT EXISTS idx_db_item_props ON database_item_properties(item_id);
+              CREATE TABLE IF NOT EXISTS page_shares (id TEXT PRIMARY KEY, page_id TEXT NOT NULL, user_email TEXT NOT NULL, permission_level TEXT NOT NULL DEFAULT 'edit', created_at TEXT NOT NULL DEFAULT (datetime('now')), FOREIGN KEY (page_id) REFERENCES pages(id) ON DELETE CASCADE, UNIQUE(page_id,user_email));
+              CREATE TABLE IF NOT EXISTS notifications (id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL, type TEXT NOT NULL DEFAULT 'info', title TEXT NOT NULL, message TEXT NOT NULL, page_id TEXT, read INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL DEFAULT (datetime('now')), FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE);
+              CREATE INDEX IF NOT EXISTS idx_shares_page ON page_shares(page_id);
+              CREATE INDEX IF NOT EXISTS idx_notifications_workspace ON notifications(workspace_id);
+              CREATE INDEX IF NOT EXISTS idx_db_views ON database_views(database_id);"
         )?;
         let count: i64 = conn.query_row("SELECT COUNT(*) FROM workspaces", [], |r| r.get(0))?;
         if count == 0 {
@@ -144,16 +143,18 @@ CREATE TABLE IF NOT EXISTS document_states (page_id TEXT PRIMARY KEY, yjs_blob B
     }
 
     pub fn create_page(&self, workspace_id: &str, parent_id: Option<&str>, title: &str, is_database: bool) -> Result<Page> {
-        let conn = self.conn.lock().unwrap();
         let id = uuid::Uuid::new_v4().to_string();
-        conn.execute("INSERT INTO pages (id,workspace_id,parent_id,title,is_database) VALUES (?1,?2,?3,?4,?5)", params![id,workspace_id,parent_id,title,is_database as i32])?;
-        if is_database {
-            let db_id = uuid::Uuid::new_v4().to_string();
-            conn.execute("INSERT INTO databases (id,page_id,title) VALUES (?1,?2,?3)", params![db_id,id,title])?;
-            conn.execute("INSERT INTO database_properties (id,database_id,name,prop_type,sort_order) VALUES (?1,?2,'Name','title',0)", params![uuid::Uuid::new_v4().to_string(),db_id])?;
-            conn.execute("INSERT INTO database_properties (id,database_id,name,prop_type,sort_order) VALUES (?1,?2,'Status','select',1)", params![uuid::Uuid::new_v4().to_string(),db_id])?;
-            conn.execute("INSERT INTO database_views (id,database_id,name,view_type,sort_order) VALUES (?1,?2,'Table','table',0)", params![uuid::Uuid::new_v4().to_string(),db_id])?;
-            conn.execute("INSERT INTO database_views (id,database_id,name,view_type,sort_order) VALUES (?1,?2,'Board','board',1)", params![uuid::Uuid::new_v4().to_string(),db_id])?;
+        {
+            let conn = self.conn.lock().unwrap();
+            conn.execute("INSERT INTO pages (id,workspace_id,parent_id,title,is_database) VALUES (?1,?2,?3,?4,?5)", params![id,workspace_id,parent_id,title,is_database as i32])?;
+            if is_database {
+                let db_id = uuid::Uuid::new_v4().to_string();
+                conn.execute("INSERT INTO databases (id,page_id,title) VALUES (?1,?2,?3)", params![db_id,id,title])?;
+                conn.execute("INSERT INTO database_properties (id,database_id,name,prop_type,sort_order) VALUES (?1,?2,'Name','title',0)", params![uuid::Uuid::new_v4().to_string(),db_id])?;
+                conn.execute("INSERT INTO database_properties (id,database_id,name,prop_type,sort_order) VALUES (?1,?2,'Status','select',1)", params![uuid::Uuid::new_v4().to_string(),db_id])?;
+                conn.execute("INSERT INTO database_views (id,database_id,name,view_type,sort_order) VALUES (?1,?2,'Table','table',0)", params![uuid::Uuid::new_v4().to_string(),db_id])?;
+                conn.execute("INSERT INTO database_views (id,database_id,name,view_type,sort_order) VALUES (?1,?2,'Board','board',1)", params![uuid::Uuid::new_v4().to_string(),db_id])?;
+            }
         }
         self.get_page_by_id(&id)
     }

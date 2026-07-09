@@ -1,9 +1,12 @@
 import { Plus, GripVertical, Trash2 } from "lucide-react";
-import { useDBStore } from "@/stores/database";
 import { useDatabase } from "@/hooks/useDatabase";
+import type { DBItem } from "@/types/database";
 
-export function ListView() {
-  const { items } = useDBStore();
+interface ListViewProps {
+  items: DBItem[];
+}
+
+export function ListView({ items }: ListViewProps) {
   const { addItem, deleteItem } = useDatabase();
 
   return (

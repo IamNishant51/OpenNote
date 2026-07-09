@@ -240,14 +240,20 @@ export function useTauriCommands() {
         setTrashedPages(nextPages.filter((page) => page.is_trash));
         return;
       }
-      try {
-        await safeInvoke("restore_page", { id });
-      } catch (e) {
-        console.error("Failed to restore page:", e);
+    try {
+      await safeInvoke("restore_page", { id });
+      const store = useWorkspaceStore.getState();
+      const restored = store.trashedPages.find((p) => p.id === id);
+      if (restored) {
+        setPages([...store.pages, { ...restored, is_trash: false }]);
+        setTrashedPages(store.trashedPages.filter((p) => p.id !== id));
       }
-    },
-    [],
-  );
+    } catch (e) {
+      console.error("Failed to restore page:", e);
+    }
+  },
+  [],
+);
 
   const loadTrashedPages = useCallback(
     async (workspaceId: string) => {
@@ -282,6 +288,7 @@ export function useTauriCommands() {
     }
     try {
       await safeInvoke("delete_page_permanently", { id });
+      setTrashedPages(useWorkspaceStore.getState().trashedPages.filter((p) => p.id !== id));
     } catch (e) {
       console.error("Failed to delete page:", e);
     }

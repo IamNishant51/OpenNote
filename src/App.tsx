@@ -101,39 +101,41 @@ function App() {
 
   const getEditorBlocks = useCallback(async () => {
     const editor = editorRef.current; if (!editor) return null;
-    try { const [md, html] = await Promise.all([editor.blocksToMarkdownLossy(editor.document), editor.blocksToFullHTML(editor.document)]); return { markdown: md, html }; } catch { return null; }
+    try {
+      const [md, html] = await Promise.all([
+        editor.blocksToMarkdownLossy(editor.document),
+        editor.blocksToFullHTML(editor.document)
+      ]);
+      return { markdown: md, html };
+    } catch { return null; }
   }, []);
+
   const handleImportComplete = useCallback((pageId: string) => { loadPage(pageId); }, [loadPage]);
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-canvas">
+    <div className="flex h-screen w-screen overflow-hidden bg-canvas-soft">
       <Sidebar />
-      <main className="flex-1 overflow-hidden bg-canvas flex flex-col">
+      <main className="flex-1 overflow-hidden bg-canvas-soft flex flex-col">
         {currentPage && (
-          <div className="flex items-center justify-between px-4 py-1 border-b border-hairline">
-            <div className="flex items-center gap-1">
-              <button onClick={() => setCommentsPanelOpen(!commentsPanelOpen)} className={`rounded-md px-2 py-1 text-xs transition-colors ${commentsPanelOpen ? "bg-sidebar-active text-ink" : "text-ink-muted hover:bg-sidebar-hover"}`}>Comments</button>
-              <button onClick={() => setVersionHistoryOpen(!versionHistoryOpen)} className={`rounded-md px-2 py-1 text-xs transition-colors ${versionHistoryOpen ? "bg-sidebar-active text-ink" : "text-ink-muted hover:bg-sidebar-hover"}`}>History</button>
-              <button onClick={() => setBacklinksOpen(!backlinksOpen)} className={`rounded-md px-2 py-1 text-xs transition-colors ${backlinksOpen ? "bg-sidebar-active text-ink" : "text-ink-muted hover:bg-sidebar-hover"}`}>Backlinks</button>
-              <button onClick={() => setTocOpen(!tocOpen)} className={`rounded-md px-2 py-1 text-xs transition-colors ${tocOpen ? "bg-sidebar-active text-ink" : "text-ink-muted hover:bg-sidebar-hover"}`}>Outline</button>
+          <div className="flex items-center justify-between px-4 py-1 border-b border-hairline bg-canvas">
+            <div className="flex items-center gap-0.5">
+              <ToolbarButton active={commentsPanelOpen} onClick={() => setCommentsPanelOpen(!commentsPanelOpen)} label="Comments" />
+              <ToolbarButton active={versionHistoryOpen} onClick={() => setVersionHistoryOpen(!versionHistoryOpen)} label="History" />
+              <ToolbarButton active={backlinksOpen} onClick={() => setBacklinksOpen(!backlinksOpen)} label="Backlinks" />
+              <ToolbarButton active={tocOpen} onClick={() => setTocOpen(!tocOpen)} label="Outline" />
             </div>
-            <div className="flex items-center gap-1">
-              {connected && <span className="flex items-center gap-1 text-xs text-green-600 mr-1"><span className="h-1.5 w-1.5 rounded-full bg-green-500" />{peers}</span>}
-              <button onClick={() => setSharingOpen(true)} className="rounded-md p-1.5 text-ink-muted hover:bg-sidebar-hover transition-colors" title="Share">
-                <Share2 className="h-3.5 w-3.5" />
-              </button>
-              <button onClick={() => setNotificationsOpen(!notificationsOpen)} className="rounded-md p-1.5 text-ink-muted hover:bg-sidebar-hover transition-colors relative" title="Notifications">
-                <Bell className="h-3.5 w-3.5" />
-              </button>
-              <button onClick={() => setAiSearchOpen(!aiSearchOpen)} className={`rounded-md p-1.5 transition-colors ${aiSearchOpen ? "bg-sidebar-active text-ink" : "text-ink-muted hover:bg-sidebar-hover"}`} title="AI Search">
-                <Search className="h-3.5 w-3.5" />
-              </button>
-              <button onClick={() => setAgentsOpen(!agentsOpen)} className={`rounded-md p-1.5 transition-colors ${agentsOpen ? "bg-sidebar-active text-ink" : "text-ink-muted hover:bg-sidebar-hover"}`} title="Custom Agents">
-                <Bot className="h-3.5 w-3.5" />
-              </button>
-              <button onClick={() => setAutomationsOpen(!automationsOpen)} className={`rounded-md p-1.5 transition-colors ${automationsOpen ? "bg-sidebar-active text-ink" : "text-ink-muted hover:bg-sidebar-hover"}`} title="Automations">
-                <Zap className="h-3.5 w-3.5" />
-              </button>
+            <div className="flex items-center gap-0.5">
+              {connected && (
+                <span className="flex items-center gap-1 text-xs text-accent-green mr-1">
+                  <span className="h-1.5 w-1.5 rounded-full bg-accent-green" />
+                  {peers}
+                </span>
+              )}
+              <IconButton onClick={() => setSharingOpen(true)} title="Share"><Share2 className="h-3.5 w-3.5" /></IconButton>
+              <IconButton onClick={() => setNotificationsOpen(!notificationsOpen)} title="Notifications" active={notificationsOpen}><Bell className="h-3.5 w-3.5" /></IconButton>
+              <IconButton onClick={() => setAiSearchOpen(!aiSearchOpen)} title="AI Search" active={aiSearchOpen}><Search className="h-3.5 w-3.5" /></IconButton>
+              <IconButton onClick={() => setAgentsOpen(!agentsOpen)} title="Custom Agents" active={agentsOpen}><Bot className="h-3.5 w-3.5" /></IconButton>
+              <IconButton onClick={() => setAutomationsOpen(!automationsOpen)} title="Automations" active={automationsOpen}><Zap className="h-3.5 w-3.5" /></IconButton>
             </div>
           </div>
         )}
@@ -143,7 +145,7 @@ function App() {
               <div className="flex h-full items-center justify-center text-ink-muted">Loading...</div>
             ) : currentPage ? (
               ready ? (
-                <BlockEditor key={currentPage.id} pageId={currentPage.id} onEditorReady={handleEditorReady} ydoc={doc.current} initialContent={initialContent} />
+                <BlockEditor key={currentPage.id} pageId={currentPage.id} onEditorReady={handleEditorReady} ydoc={doc ?? undefined} initialContent={initialContent} />
               ) : (
                 <div className="flex h-full items-center justify-center text-ink-muted">Loading page...</div>
               )
@@ -171,8 +173,39 @@ function App() {
       <AiSettings open={settingsOpen} onClose={() => setSettingsOpen(false)} />
       <TemplatesGallery open={templatesGalleryOpen} onClose={() => setTemplatesGalleryOpen(false)} />
       {currentPage && <SharingDialog pageId={currentPage.id} open={sharingOpen} onClose={() => setSharingOpen(false)} />}
-      {provider.current && ready && <CursorOverlay provider={provider.current} />}
+      {provider && ready && <CursorOverlay provider={provider} />}
     </div>
+  );
+}
+
+function ToolbarButton({ active, onClick, label }: { active: boolean; onClick: () => void; label: string }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`rounded-md px-2 py-1 text-xs font-medium transition-colors cursor-pointer ${
+        active
+          ? "bg-sidebar-active text-ink"
+          : "text-ink-muted hover:bg-sidebar-hover"
+      }`}
+    >
+      {label}
+    </button>
+  );
+}
+
+function IconButton({ children, onClick, title, active }: { children: React.ReactNode; onClick: () => void; title: string; active?: boolean }) {
+  return (
+    <button
+      onClick={onClick}
+      title={title}
+      className={`rounded-md p-1.5 transition-colors cursor-pointer ${
+        active
+          ? "bg-sidebar-active text-ink"
+          : "text-ink-muted hover:bg-sidebar-hover"
+      }`}
+    >
+      {children}
+    </button>
   );
 }
 

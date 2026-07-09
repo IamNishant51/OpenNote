@@ -2,9 +2,15 @@ import { Plus, GripVertical, Trash2 } from "lucide-react";
 import { useDBStore } from "@/stores/database";
 import { useDatabase } from "@/hooks/useDatabase";
 import { PropertyCell } from "@/components/database/PropertyCell";
+import type { DBItem, DBProperty, DBItemProperty } from "@/types/database";
 
-export function TableView() {
-  const { properties, items, itemProperties } = useDBStore();
+interface TableViewProps {
+  filteredItems: DBItem[];
+  properties: DBProperty[];
+  itemProperties: Record<string, DBItemProperty[]>;
+}
+
+export function TableView({ filteredItems, properties, itemProperties }: TableViewProps) {
   const { addItem, updateItemProperty, deleteItem } = useDatabase();
 
   return (
@@ -15,7 +21,7 @@ export function TableView() {
             <tr className="border-b border-hairline">
               <th className="w-8 px-2 py-2" />
               {properties.map((prop) => (
-                <th key={prop.id} className="px-3 py-2 text-left text-xs font-medium text-ink-muted uppercase tracking-wider border-r border-hairline last:border-r-0 whitespace-nowrap">
+                <th key={prop.id} className="px-3 py-2 text-left text-eyebrow text-ink-muted uppercase tracking-wider border-r border-hairline last:border-r-0 whitespace-nowrap">
                   {prop.name}
                 </th>
               ))}
@@ -23,7 +29,7 @@ export function TableView() {
             </tr>
           </thead>
           <tbody>
-            {items.map((item) => {
+            {filteredItems.map((item) => {
               const props = itemProperties[item.id] || [];
               return (
                 <tr key={item.id} className="border-b border-hairline hover:bg-sidebar-hover group">

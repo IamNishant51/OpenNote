@@ -1,16 +1,19 @@
 import { Plus } from "lucide-react";
-import { useDBStore } from "@/stores/database";
 import { useDatabase } from "@/hooks/useDatabase";
 import { PageIcon } from "@/components/shared/PageIcon";
+import type { DBItem } from "@/types/database";
 
-export function GalleryView() {
-  const { items } = useDBStore();
+interface GalleryViewProps {
+  filteredItems: DBItem[];
+}
+
+export function GalleryView({ filteredItems }: GalleryViewProps) {
   const { addItem } = useDatabase();
 
   return (
     <div className="h-full overflow-y-auto p-4">
       <div className="grid grid-cols-3 gap-3">
-        {items.map((item) => (
+        {filteredItems.map((item) => (
           <div key={item.id} className="rounded-lg border border-hairline bg-canvas overflow-hidden hover:shadow-soft transition-shadow">
             <div className="h-32 bg-gradient-to-br from-primary/10 to-accent-teal/10 flex items-center justify-center">
               <PageIcon icon={null} size="lg" />
