@@ -129,6 +129,7 @@ export function AiPanel() {
   const [selectedCmd, setSelectedCmd] = useState(0);
   const [streaming, setStreaming] = useState(false);
   const [streamingContent, setStreamingContent] = useState("");
+  const [elapsed, setElapsed] = useState(0);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -180,9 +181,13 @@ export function AiPanel() {
     description: "Search the web for current information, news, facts, and general knowledge. Use when the user asks about events, people, concepts, or anything beyond the page content.",
     execute: async ({ query }) => {
       try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 8000);
         const res = await fetch(
-          `https://en.wikipedia.org/w/api.php?origin=*&action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&srlimit=5`
+          `https://en.wikipedia.org/w/api.php?origin=*&action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&srlimit=5`,
+          { signal: controller.signal }
         );
+        clearTimeout(timeout);
         const data = await res.json();
         const results = (data.query?.search || []).slice(0, 5).map((r: any) => ({
           title: r.title,
@@ -205,9 +210,13 @@ export function AiPanel() {
     description: "Search for YouTube videos on any topic. Returns video titles, URLs, and channel names. Use when the user asks to find videos, tutorials, or anything video-related.",
     execute: async ({ query }) => {
       try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 8000);
         const res = await fetch(
-          `https://inv.nadeko.net/api/v1/search?q=${encodeURIComponent(query)}&type=video`
+          `https://inv.nadeko.net/api/v1/search?q=${encodeURIComponent(query)}&type=video`,
+          { signal: controller.signal }
         );
+        clearTimeout(timeout);
         const data = await res.json();
         const videos = (Array.isArray(data) ? data : []).slice(0, 5).map((v: any) => ({
           title: v.title,
@@ -235,6 +244,8 @@ export function AiPanel() {
     setInput("");
     setStreaming(true);
     setStreamingContent("");
+    const startTime = Date.now();
+    const timer = setInterval(() => setElapsed(Date.now() - startTime), 200);
 
     try {
       const model = await createProviderModel(selectedProvider!, selectedModelId!);
@@ -299,8 +310,10 @@ export function AiPanel() {
     } finally {
       setStreaming(false);
       setStreamingContent("");
+      clearInterval(timer);
+      setElapsed(0);
     }
-  }, [hasProvider, streaming, selectedProvider, selectedModelId, chatMessages, addChatMessage, getContext, insertToPage, searchWeb, searchYouTube]);
+  }, [hasProvider, streaming, selectedProvider, selectedModelId, chatMessages, addChatMessage, getContext, insertToPage, searchWeb, searchYouTube, setElapsed]);
 
   const handleSend = useCallback(() => {
     const { actionType, prompt } = parseInput(input);
@@ -396,7 +409,14 @@ export function AiPanel() {
               <div className="flex gap-2 justify-start">
                 <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-primary flex-shrink-0 mt-0.5"><Bot className="h-4 w-4" /></div>
                 <div className="max-w-[85%] rounded-lg px-3 py-2 text-sm bg-sidebar-bg text-ink-secondary">
-                  {streamingContent ? <p className="whitespace-pre-wrap">{streamingContent}</p> : <Loader2 className="h-4 w-4 animate-spin text-ink-muted" />}
+                  {streamingContent ? (
+                    <p className="whitespace-pre-wrap">{streamingContent}</p>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin text-ink-muted" />
+                      <span className="text-xs text-ink-faint">Thinking{(elapsed > 2000 ? ` (${(elapsed / 1000).toFixed(0)}s)` : "")}...</span>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

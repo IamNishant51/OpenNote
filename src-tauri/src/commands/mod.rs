@@ -103,20 +103,20 @@ pub fn get_document_state(db: State<'_, Database>, page_id: String) -> Result<Op
 #[tauri::command]
 pub fn save_document_state(db: State<'_, Database>, page_id: String, blob: Vec<u8>) -> Result<(), String> { db.save_document_state(&page_id, &blob).map_err(|e| e.to_string()) }
 
-#[derive(serde::Serialize, serde::Deserialize)]
-pub struct ProxyResponse {
-    pub status: u16,
-    pub headers: HashMap<String, String>,
-    pub body: String,
+#[derive(serde::Serialize)]
+pub struct StreamChunk {
+    pub data: String,
+    pub done: bool,
 }
 
 #[tauri::command]
-pub async fn proxy_ai_request(
+pub async fn proxy_ai_request_stream(
     url: String,
     method: String,
     headers: HashMap<String, String>,
     body: Option<String>,
-) -> Result<ProxyResponse, String> {
+    on_event: tauri::ipc::Channel<StreamChunk>,
+) -> Result<(), String> {
     let client = reqwest::Client::new();
     let mut req = client.request(
         method.parse().map_err(|e| format!("Invalid HTTP method: {}", e))?,
@@ -131,11 +131,11 @@ pub async fn proxy_ai_request(
     if let Some(b) = body {
         req = req.body(b);
     }
-    let resp = req.send().await.map_err(|e| format!("Proxy request failed: {}", e))?;
-    let status = resp.status().as_u16();
-    let resp_headers: HashMap<String, String> = resp.headers().iter()
-        .map(|(k, v)| (k.to_string(), v.to_str().unwrap_or("").to_string()))
-        .collect();
-    let resp_body = resp.text().await.map_err(|e| format!("Failed to read response body: {}", e))?;
-    Ok(ProxyResponse { status, headers: resp_headers, body: resp_body })
+    let mut resp = req.send().await.map_err(|e| format!("Proxy request failed: {}", e))?;
+    while let Some(chunk) = resp.chunk().await.map_err(|e| format!("Read chunk error: {}", e))? {
+        let chunk_str = String::from_utf8(chunk.to_vec()).map_err(|e| format!("UTF-8 error: {}", e))?;
+        on_event.send(StreamChunk { data: chunk_str, done: false }).map_err(|e| format!("Channel error: {}", e))?;
+    }
+    on_event.send(StreamChunk { data: String::new(), done: true }).ok();
+    Ok(())
 }

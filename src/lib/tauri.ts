@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { invoke, Channel } from "@tauri-apps/api/core";
 
 export function isTauriRuntime() {
   return typeof window !== "undefined" && Boolean((window as Window & { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__);
@@ -32,12 +32,39 @@ export function createTauriFetch(): typeof fetch {
       else if (init.body instanceof URLSearchParams) body = init.body.toString();
       else body = String(init.body);
     }
-    const result = await invoke<{ status: number; headers: Record<string, string>; body: string }>(
-      "proxy_ai_request", { url, method, headers, body }
-    );
-    return new Response(result.body, {
-      status: result.status,
-      headers: result.headers,
+
+    const channel = new Channel<{ data: string; done: boolean }>();
+    const buffer: Uint8Array[] = [];
+    let streamController: ReadableStreamDefaultController<Uint8Array> | null = null;
+    let streamDone = false;
+
+    const stream = new ReadableStream<Uint8Array>({
+      start(c) {
+        streamController = c;
+        for (const chunk of buffer) c.enqueue(chunk);
+        buffer.length = 0;
+        if (streamDone) c.close();
+      },
+      cancel() { streamController = null; },
     });
+
+    channel.onmessage = (msg) => {
+      if (msg.done) {
+        streamDone = true;
+        streamController?.close();
+        return;
+      }
+      const bytes = new TextEncoder().encode(msg.data);
+      if (streamController) {
+        streamController.enqueue(bytes);
+      } else {
+        buffer.push(bytes);
+      }
+    };
+
+    invoke("proxy_ai_request_stream", { url, method, headers, body, onEvent: channel })
+      .catch((err) => { console.error("[tauriFetch] proxy error:", err); streamController?.close(); });
+
+    return new Response(stream, { status: 200 });
   };
 }

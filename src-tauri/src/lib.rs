@@ -32,7 +32,7 @@ pub fn run() {
             commands::share_page, commands::update_share_permission, commands::remove_share, commands::get_page_shares,
             commands::get_notifications, commands::create_notification, commands::mark_notification_read, commands::mark_all_notifications_read,
             commands::get_document_state, commands::save_document_state,
-            commands::proxy_ai_request,
+            commands::proxy_ai_request_stream,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
