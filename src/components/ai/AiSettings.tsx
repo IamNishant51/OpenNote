@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import { X, Key, RefreshCw, Eye, EyeOff, Check, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAIStore } from "@/stores/ai";
@@ -15,10 +15,6 @@ export function AiSettings({ open, onClose }: { open: boolean; onClose: () => vo
   // Use a ref for discoverModels so the effect doesn't re-run every time the store updates
   const discoverModelsRef = useRef(discoverModels);
   discoverModelsRef.current = discoverModels;
-
-  useEffect(() => {
-    if (open) discoverModelsRef.current();
-  }, [open]); // ← only [open], not [discoverModels], so it never loops
 
   const handleApiKeyChange = (providerId: string, key: string) => {
     updateProvider(providerId, { apiKey: key, enabled: !!key });

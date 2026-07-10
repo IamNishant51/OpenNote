@@ -266,16 +266,27 @@ export function AiPanel() {
 
       const hasTools = supportsToolCalling(selectedProvider!.type);
       const doStream = async (withTools: boolean) => {
+        let streamError: Error | null = null;
         const result = streamText({
           model,
           system,
           messages: history,
           ...(withTools ? { tools: { search_web: searchWeb, search_youtube: searchYouTube } } : {}),
+          onError: (err: unknown) => {
+            streamError = err instanceof Error ? err : new Error(String(err));
+          },
         });
         let full = "";
-        for await (const chunk of result.textStream) {
-          full += chunk;
-          setStreamingContent(full);
+        try {
+          for await (const chunk of result.textStream) {
+            full += chunk;
+            setStreamingContent(full);
+          }
+        } catch (e) {
+          streamError = e instanceof Error ? e : new Error(String(e));
+        }
+        if (streamError && !full.trim()) {
+          throw streamError;
         }
         return full.trim();
       };
