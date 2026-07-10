@@ -141,6 +141,15 @@ pub async fn proxy_ai_request_stream(
             format!("Proxy request failed: {}", msg)
         }
     })?;
+    
+    let status = resp.status();
+    if !status.is_success() {
+        let error_body = resp.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+        let err = format!("AI provider returned error {}: {}", status.as_u16(), error_body);
+        on_event.send(StreamChunk { data: format!("__ERROR__{}", err), done: true }).ok();
+        return Err(err);
+    }
+    
     while let Some(chunk) = resp.chunk().await.map_err(|e| format!("Read chunk error: {}", e))? {
         let chunk_str = String::from_utf8(chunk.to_vec()).map_err(|e| format!("UTF-8 error: {}", e))?;
         on_event.send(StreamChunk { data: chunk_str, done: false }).map_err(|e| format!("Channel error: {}", e))?;

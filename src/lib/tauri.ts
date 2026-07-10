@@ -37,6 +37,7 @@ export function createTauriFetch(): typeof fetch {
     const buffer: Uint8Array[] = [];
     let streamController: ReadableStreamDefaultController<Uint8Array> | null = null;
     let streamDone = false;
+    let proxyError: string | null = null;
 
     const stream = new ReadableStream<Uint8Array>({
       start(c) {
@@ -51,7 +52,15 @@ export function createTauriFetch(): typeof fetch {
     channel.onmessage = (msg) => {
       if (msg.done) {
         streamDone = true;
-        streamController?.close();
+        if (proxyError) {
+          streamController?.error(new Error(proxyError));
+        } else {
+          streamController?.close();
+        }
+        return;
+      }
+      if (msg.data.startsWith("__ERROR__")) {
+        proxyError = msg.data.slice("__ERROR__".length);
         return;
       }
       const bytes = new TextEncoder().encode(msg.data);
@@ -63,7 +72,7 @@ export function createTauriFetch(): typeof fetch {
     };
 
     invoke("proxy_ai_request_stream", { url, method, headers, body, onEvent: channel })
-      .catch((err) => { console.error("[tauriFetch] proxy error:", err); streamController?.close(); });
+      .catch((err) => { console.error("[tauriFetch] proxy error:", err); if (!proxyError) streamController?.error(err); });
 
     return new Response(stream, { status: 200 });
   };
