@@ -1,7 +1,21 @@
 import { useState, useRef } from "react";
-import { X, Key, RefreshCw, Eye, EyeOff, Check, Loader2 } from "lucide-react";
+import { X, Key, RefreshCw, Eye, EyeOff, Check, Loader2, PlugZap } from "lucide-react";
+import { invoke } from "@tauri-apps/api/core";
 import { cn } from "@/lib/utils";
 import { useAIStore } from "@/stores/ai";
+import { isTauriRuntime } from "@/lib/tauri";
+
+const TEST_URLS: Record<string, string> = {
+  openai: "https://api.openai.com/v1/models",
+  anthropic: "https://api.anthropic.com/v1/models",
+  google: "https://generativelanguage.googleapis.com/v1beta/models",
+  mistral: "https://api.mistral.ai/v1/models",
+  deepseek: "https://api.deepseek.com/v1/models",
+  nvidia: "https://integrate.api.nvidia.com/v1/models",
+  groq: "https://api.groq.com/openai/v1/models",
+  ollama: "http://localhost:11434/v1/models",
+  lmstudio: "http://localhost:1234/v1/models",
+};
 
 export function AiSettings({ open, onClose }: { open: boolean; onClose: () => void }) {
   const providers = useAIStore(s => s.providers);
@@ -11,6 +25,8 @@ export function AiSettings({ open, onClose }: { open: boolean; onClose: () => vo
   const setSelectedProvider = useAIStore(s => s.setSelectedProvider);
   const setSelectedModel = useAIStore(s => s.setSelectedModel);
   const [showKey, setShowKey] = useState<Record<string, boolean>>({});
+  const [testing, setTesting] = useState<Record<string, boolean>>({});
+  const [testResult, setTestResult] = useState<Record<string, string>>({});
 
   // Use a ref for discoverModels so the effect doesn't re-run every time the store updates
   const discoverModelsRef = useRef(discoverModels);
@@ -22,6 +38,33 @@ export function AiSettings({ open, onClose }: { open: boolean; onClose: () => vo
 
   const handleRescan = async () => {
     await discoverModels();
+  };
+
+  const handleTest = async (providerId: string, baseUrl: string, apiKey?: string | null) => {
+    setTesting((s) => ({ ...s, [providerId]: true }));
+    setTestResult((s) => ({ ...s, [providerId]: "" }));
+    const url = TEST_URLS[providerId] || `${baseUrl}/models`;
+    try {
+      if (isTauriRuntime()) {
+        const status = await invoke<number>("test_connection", { url, apiKey: apiKey || null });
+        setTestResult((s) => ({
+          ...s,
+          [providerId]: status >= 200 && status < 300 ? `✓ Connected (${status})` : `✗ Failed (${status})`,
+        }));
+      } else {
+        const res = await fetch(url, {
+          headers: apiKey ? { Authorization: `Bearer ${apiKey}` } : {},
+        });
+        setTestResult((s) => ({
+          ...s,
+          [providerId]: res.ok ? `✓ Connected (${res.status})` : `✗ Failed (${res.status})`,
+        }));
+      }
+    } catch (e) {
+      setTestResult((s) => ({ ...s, [providerId]: `✗ ${e instanceof Error ? e.message : "Connection failed"}` }));
+    } finally {
+      setTesting((s) => ({ ...s, [providerId]: false }));
+    }
   };
 
   const handleSelectModel = (providerId: string, modelId: string) => {
@@ -107,6 +150,25 @@ export function AiSettings({ open, onClose }: { open: boolean; onClose: () => vo
                 <p className="text-xs text-ink-faint mb-3 rounded-lg border border-dashed border-hairline bg-canvas-soft px-3 py-2">
                   Auto-detecting local models at {provider.baseUrl}
                   {provider.models.length > 0 && ` (${provider.models.length} found)`}
+                </p>
+              )}
+
+              <button
+                onClick={() => handleTest(provider.id, provider.baseUrl || "", provider.apiKey || null)}
+                disabled={testing[provider.id]}
+                className="mb-3 flex items-center gap-1.5 rounded-lg border border-hairline bg-canvas-soft px-3 py-1.5 text-xs text-ink-muted hover:text-ink-secondary transition-colors disabled:opacity-50"
+              >
+                <PlugZap className={cn("h-3.5 w-3.5", testing[provider.id] && "animate-spin")} />
+                {testing[provider.id] ? "Testing..." : "Test Connection"}
+              </button>
+              {testResult[provider.id] && (
+                <p className={cn(
+                  "mb-3 text-xs rounded-lg px-3 py-1.5",
+                  testResult[provider.id].startsWith("✓")
+                    ? "bg-green-50 text-green-700 border border-green-200"
+                    : "bg-red-50 text-red-700 border border-red-200",
+                )}>
+                  {testResult[provider.id]}
                 </p>
               )}
 

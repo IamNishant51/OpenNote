@@ -36,6 +36,7 @@ pub fn run() {
             commands::get_notifications, commands::create_notification, commands::mark_notification_read, commands::mark_all_notifications_read,
             commands::get_document_state, commands::save_document_state,
             commands::proxy_ai_request_stream,
+            commands::test_connection,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -133,11 +133,34 @@ pub async fn proxy_ai_request_stream(
     if let Some(b) = body {
         req = req.body(b);
     }
-    let mut resp = req.send().await.map_err(|e| format!("Proxy request failed: {}", e))?;
+    let mut resp = req.send().await.map_err(|e| {
+        let msg = e.to_string();
+        if msg.contains("dns") || msg.contains("connect") || msg.contains("timed out") || msg.contains("resolve") {
+            format!("Cannot reach the AI server (network error). Check your internet connection or API URL. ({})", msg)
+        } else {
+            format!("Proxy request failed: {}", msg)
+        }
+    })?;
     while let Some(chunk) = resp.chunk().await.map_err(|e| format!("Read chunk error: {}", e))? {
         let chunk_str = String::from_utf8(chunk.to_vec()).map_err(|e| format!("UTF-8 error: {}", e))?;
         on_event.send(StreamChunk { data: chunk_str, done: false }).map_err(|e| format!("Channel error: {}", e))?;
     }
     on_event.send(StreamChunk { data: String::new(), done: true }).ok();
     Ok(())
+}
+
+#[tauri::command]
+pub async fn test_connection(
+    client: State<'_, reqwest::Client>,
+    url: String,
+    api_key: Option<String>,
+) -> Result<u16, String> {
+    let mut req = client.get(&url);
+    if let Some(key) = api_key {
+        if !key.is_empty() {
+            req = req.header("Authorization", format!("Bearer {}", key));
+        }
+    }
+    let resp = req.send().await.map_err(|e| format!("Connection failed: {}", e))?;
+    Ok(resp.status().as_u16())
 }
