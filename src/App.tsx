@@ -69,14 +69,7 @@ function App() {
   const editorRef = useRef<any>(null);
   const bootstrappedRef = useRef(false);
 
-  const [yjsEnabled, setYjsEnabled] = useState(false);
-  useEffect(() => {
-    const wsUrl = "ws://localhost:1234";
-    const ws = new WebSocket(wsUrl);
-    ws.onopen = () => { ws.close(); setYjsEnabled(true); };
-    ws.onerror = () => setYjsEnabled(false);
-    return () => ws.close();
-  }, []);
+  const yjsEnabled = false;
 
   const { doc, provider, ready, initialContent } = useYjsSync(currentPage?.id ?? null, yjsEnabled);
 
