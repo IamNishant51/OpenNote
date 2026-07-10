@@ -123,7 +123,7 @@ function buildSystemPrompt(pageTitle?: string, pageContent?: string, actionType?
 }
 
 export function AiPanel() {
-  const { providers, selectedProviderId, selectedModelId, chatMessages, addChatMessage, clearChat, setPanelOpen, setSettingsOpen, customAgents } = useAIStore();
+  const { providers, selectedProviderId, selectedModelId, chatMessages, addChatMessage, clearChat, setPanelOpen, setSettingsOpen, customAgents, setSelectedProvider, setSelectedModel } = useAIStore();
   const addToast = useToastStore(s => s.addToast);
   const currentPage = useWorkspaceStore(s => s.currentPage);
   const [input, setInput] = useState("");
@@ -251,10 +251,16 @@ export function AiPanel() {
     const startTime = Date.now();
     const timer = setInterval(() => setElapsed(Date.now() - startTime), 200);
 
+    let error: Error | null = null;
     try {
       const model = await createProviderModel(selectedProvider!, selectedModelId!);
       if (!model) {
-        setStreamingContent("Failed to create AI model. Check your provider settings.");
+        addChatMessage({
+          id: (Date.now() + 1).toString(),
+          role: "assistant",
+          content: "❌ Error: Failed to create AI model. Check your provider settings.",
+          timestamp: Date.now(),
+        });
         return;
       }
 
@@ -309,7 +315,12 @@ export function AiPanel() {
       }
 
       if (!content) {
-        setStreamingContent("The model returned an empty response. Try a different prompt or provider.");
+        addChatMessage({
+          id: (Date.now() + 1).toString(),
+          role: "assistant",
+          content: "⚠️ The model returned an empty response. Try a different prompt or provider.",
+          timestamp: Date.now(),
+        });
         return;
       }
 
@@ -321,13 +332,17 @@ export function AiPanel() {
         timestamp: Date.now(),
       });
     } catch (e) {
-      const errMsg = e instanceof Error ? e.message : "AI request failed";
-      setStreamingContent(`Error: ${errMsg}`);
-      addToast({ type: "error", message: `AI: ${errMsg}` });
+      error = e instanceof Error ? e : new Error(String(e));
+      addChatMessage({
+        id: (Date.now() + 1).toString(),
+        role: "assistant",
+        content: `❌ Error: ${error.message}`,
+        timestamp: Date.now(),
+      });
+      addToast({ type: "error", message: `AI: ${error.message}` });
       console.error("[AiPanel] sendMessage error:", e);
     } finally {
       setStreaming(false);
-      setStreamingContent("");
       clearInterval(timer);
       setElapsed(0);
     }
@@ -378,6 +393,32 @@ export function AiPanel() {
           <span className="text-sm font-semibold text-ink">{selectedAgent ? `AI - ${selectedAgent.name}` : "AI"}</span>
         </div>
         <div className="flex items-center gap-1">
+          {hasProvider && (
+            <div className="flex items-center gap-2 mr-2">
+              <select
+                value={selectedProviderId || ""}
+                onChange={e => setSelectedProvider(e.target.value)}
+                className="rounded-md border border-hairline bg-canvas-soft px-2 py-1 text-xs text-ink outline-none hover:border-primary/50"
+                title="Select provider"
+              >
+                {providers
+                  .filter(p => (p.enabled || p.apiKey) && p.models.length > 0)
+                  .map(p => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+              </select>
+              <select
+                value={selectedModelId || ""}
+                onChange={e => setSelectedModel(e.target.value)}
+                className="rounded-md border border-hairline bg-canvas-soft px-2 py-1 text-xs text-ink outline-none hover:border-primary/50"
+                title="Select model"
+              >
+                {selectedProvider?.models.map(m => (
+                  <option key={m.id} value={m.id}>{m.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
           <button onClick={() => clearChat()} className="flex h-7 w-7 items-center justify-center rounded-md hover:bg-sidebar-hover text-ink-muted" title="Clear chat"><Trash2 className="h-3.5 w-3.5" /></button>
           <button onClick={() => setSettingsOpen(true)} className="flex h-7 w-7 items-center justify-center rounded-md hover:bg-sidebar-hover text-ink-muted" title="AI Settings"><Settings className="h-3.5 w-3.5" /></button>
           <button onClick={() => setPanelOpen(false)} className="flex h-7 w-7 items-center justify-center rounded-md hover:bg-sidebar-hover text-ink-muted" title="Close"><X className="h-3.5 w-3.5" /></button>
@@ -404,6 +445,40 @@ export function AiPanel() {
             >
               <X className="h-3 w-3" />
             </button>
+          )}
+        </div>
+      )}
+
+      {hasProvider && (
+        <div className="flex items-center gap-1 px-3 py-1.5 border-b border-hairline flex-shrink-0">
+          <select
+            value={selectedProviderId ?? ""}
+            onChange={e => {
+              const pid = e.target.value;
+              setSelectedProvider(pid);
+              const prov = providers.find(p => p.id === pid);
+              if (prov?.models?.[0]) setSelectedModel(prov.models[0].id);
+            }}
+            className="flex-1 text-xs text-ink-muted bg-canvas-soft rounded-lg border border-hairline px-2 py-1 outline-none"
+          >
+            {providers
+              .filter(p => p.enabled || p.apiKey)
+              .map(p => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+          </select>
+          {selectedModelId && (
+            <select
+              value={selectedModelId}
+              onChange={e => setSelectedModel(e.target.value)}
+              className="w-40 text-xs text-ink-muted bg-canvas-soft rounded-lg border border-hairline px-2 py-1 outline-none"
+            >
+              {providers
+                .find(p => p.id === selectedProviderId)
+                ?.models.map(m => (
+                  <option key={m.id} value={m.id}>{m.name}</option>
+                ))}
+            </select>
           )}
         </div>
       )}
