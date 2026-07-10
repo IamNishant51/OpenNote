@@ -9,14 +9,29 @@ import { DatabaseView } from "@/components/database/DatabaseView";
 import { editorRef } from "@/lib/editorRef";
 import { PageIcon } from "@/components/shared/PageIcon";
 import { EmojiPicker } from "@/components/shared/EmojiPicker";
+import { Settings } from "lucide-react";
+import { cn } from "@/lib/utils";
 import type { Page } from "@/types";
 import { Breadcrumbs } from "./Breadcrumbs";
 
 function PageHeader({ page }: { page: Page }) {
   const { savePage, toggleFavorite } = useTauriCommands();
   const [title, setTitle] = useState(page.title);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const settingsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { setTitle(page.title); }, [page.id, page.title]);
+
+  useEffect(() => {
+    if (!settingsOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (settingsRef.current && !settingsRef.current.contains(e.target as Node)) {
+        setSettingsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [settingsOpen]);
 
   const handleTitleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const val = e.target.value;
@@ -34,9 +49,38 @@ function PageHeader({ page }: { page: Page }) {
         <div className="mb-2">
           <EmojiPicker value={page.icon || "📄"} onChange={handleIconChange} />
         </div>
-        <button onClick={() => toggleFavorite(page.id)}
-          className={`text-sm transition-colors ${page.is_favorite ? "text-yellow-500" : "text-ink-faint hover:text-ink-muted"}`}
-        >{page.is_favorite ? "★" : "☆"}</button>
+        <div className="flex items-center gap-1">
+          <div className="relative">
+            <button onClick={() => setSettingsOpen(!settingsOpen)} className="p-1 rounded-md hover:bg-sidebar-hover text-ink-faint">
+              <Settings className="h-4 w-4" />
+            </button>
+            {settingsOpen && (
+              <div ref={settingsRef} className="absolute right-0 top-full mt-1 z-50 w-48 rounded-xl border border-hairline bg-canvas shadow-elevated p-3 space-y-3">
+                <div>
+                  <p className="text-xs font-medium text-ink-muted mb-1.5">Page Width</p>
+                  <div className="flex gap-1">
+                    <button onClick={() => savePage(page.id, title, page.icon, page.font, "default", page.is_favorite)}
+                      className={cn("flex-1 rounded-lg px-2 py-1 text-xs transition-colors", page.width === "default" ? "bg-primary text-white" : "bg-canvas-soft text-ink-muted hover:bg-sidebar-hover")}>Default</button>
+                    <button onClick={() => savePage(page.id, title, page.icon, page.font, "full", page.is_favorite)}
+                      className={cn("flex-1 rounded-lg px-2 py-1 text-xs transition-colors", page.width === "full" ? "bg-primary text-white" : "bg-canvas-soft text-ink-muted hover:bg-sidebar-hover")}>Full</button>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-ink-muted mb-1.5">Font</p>
+                  <div className="flex gap-1">
+                    {(["default", "serif", "mono"] as const).map(f => (
+                      <button key={f} onClick={() => savePage(page.id, title, page.icon, f, page.width, page.is_favorite)}
+                        className={cn("flex-1 rounded-lg px-2 py-1 text-xs capitalize transition-colors", page.font === f ? "bg-primary text-white" : "bg-canvas-soft text-ink-muted hover:bg-sidebar-hover")}>{f}</button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+          <button onClick={() => toggleFavorite(page.id)}
+            className={`text-sm transition-colors ${page.is_favorite ? "text-yellow-500" : "text-ink-faint hover:text-ink-muted"}`}
+          >{page.is_favorite ? "★" : "☆"}</button>
+        </div>
       </div>
       <textarea value={title} onChange={handleTitleChange}
         className="w-full resize-none border-none bg-transparent text-h1 font-bold text-ink outline-none placeholder:text-ink-faint"
@@ -145,7 +189,7 @@ export function BlockEditor({ pageId, onEditorReady, ydoc, initialContent }: Blo
   }
 
   return (
-    <div className="mx-auto h-full max-w-[900px] px-16 py-8 overflow-y-auto">
+    <div className={cn("mx-auto h-full max-w-[900px] px-16 py-8 overflow-y-auto", currentPage.font === "serif" ? "font-serif" : currentPage.font === "mono" ? "font-mono" : "")}>
       <Breadcrumbs />
       <PageHeader page={currentPage} />
       <BlockNoteViewRaw editor={editor as any} theme={darkMode ? "dark" : "light"} />

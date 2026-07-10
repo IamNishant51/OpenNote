@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import type { AIProvider, AIModel, AIChatMessage, CustomAgent } from "@/types/ai";
 import { getDefaultProviders, discoverProviderModels } from "@/lib/ai/provider-registry";
+import { encryptKeys, decryptKeys } from "@/lib/crypto";
 
 interface AIStore {
   providers: AIProvider[];
@@ -65,7 +66,7 @@ export const useAIStore = create<AIStore>((set, get) => ({
       for (const p of newProviders) {
         if (p.apiKey) keys[p.id] = { apiKey: p.apiKey };
       }
-      localStorage.setItem("opennotes_provider_keys", JSON.stringify(keys));
+      localStorage.setItem("opennotes_provider_keys", encryptKeys(keys));
       return { providers: newProviders };
     }),
   setModels: (models) => set({ models }),
@@ -94,10 +95,10 @@ export const useAIStore = create<AIStore>((set, get) => ({
     const defaults = getDefaultProviders();
     
     // Load persisted API keys and enabled state from localStorage
-    const savedKeys = localStorage.getItem("opennotes_provider_keys");
-    if (savedKeys) {
-      try {
-        const keys = JSON.parse(savedKeys);
+    const savedEncoded = localStorage.getItem("opennotes_provider_keys");
+    if (savedEncoded) {
+      const keys = decryptKeys(savedEncoded);
+      if (keys) {
         for (const provider of defaults) {
           const saved = keys[provider.id];
           if (saved?.apiKey) {
@@ -105,7 +106,7 @@ export const useAIStore = create<AIStore>((set, get) => ({
             provider.enabled = true;
           }
         }
-      } catch { /* ignore parse errors */ }
+      }
     }
 
     const enabled = defaults.filter((p) => p.enabled || p.apiKey);

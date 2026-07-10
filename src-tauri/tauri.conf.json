@@ -21,7 +21,7 @@
       }
     ],
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; connect-src 'self' https://*.openai.com https://*.anthropic.com https://*.googleapis.com https://*.mistral.ai https://*.deepseek.com https://integrate.api.nvidia.com https://api.groq.com https://en.wikipedia.org https://*.wikipedia.org https://inv.nadeko.net; img-src 'self' data:; style-src 'self' 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com"
     }
   },
   "bundle": {

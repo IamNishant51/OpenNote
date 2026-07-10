@@ -5,6 +5,7 @@ import { isTauriRuntime } from "@/lib/tauri";
 import { useWorkspaceStore } from "@/stores/workspace";
 import { useAIStore } from "@/stores/ai";
 import { useTauriCommands } from "@/hooks/useTauriCommands";
+import { useToastStore } from "@/stores/toast";
 import { createProviderModel } from "@/lib/ai/provider-registry";
 import { generateText } from "ai";
 import { PageIcon } from "@/components/shared/PageIcon";
@@ -58,6 +59,7 @@ export function AISearchPanel({ open, onClose }: AISearchPanelProps) {
   const handleAiEnhance = async () => {
     if (!selectedProvider || !selectedModel || results.length === 0) return;
     setAiLoading(true);
+    const addToast = useToastStore.getState().addToast;
     try {
       const model = await createProviderModel(selectedProvider, selectedModelId!);
       if (!model) return;
@@ -69,9 +71,16 @@ ${results.map((p, i) => `${i}: ${p.title}`).join("\n")}`;
 
       const res = await (generateText as any)({ model, system: "You are a search relevance ranker. Return only valid JSON.", prompt });
       const text = res.text || res.steps?.[0]?.text || "";
-      const order = JSON.parse(text) as number[];
-      if (Array.isArray(order)) {
-        const reordered = order.map(i => allPagesRef.current[i]).filter(Boolean);
+      let ranked;
+      try {
+        ranked = JSON.parse(text);
+        if (!Array.isArray(ranked)) throw new Error("not an array");
+      } catch {
+        addToast({ type: "warning", message: "AI re-ranking failed, showing default results" });
+        ranked = null;
+      }
+      if (ranked) {
+        const reordered = ranked.map((i: number) => allPagesRef.current[i]).filter(Boolean);
         if (reordered.length > 0) setResults(reordered);
       }
       setAiEnhanced(true);

@@ -157,6 +157,28 @@ export function PropertyCell({ property, cell, onChange }: PropertyCellProps) {
     );
   }
 
+  if (property.prop_type === "formula") {
+    return (
+      <div className="px-3 py-2 min-w-[140px] text-sm text-ink-faint italic">
+        ⚡ {value || "—"}
+      </div>
+    );
+  }
+  if (property.prop_type === "relation") {
+    return (
+      <div className="px-3 py-2 min-w-[140px] text-sm text-primary">
+        {value ? `↗ ${value}` : "—"}
+      </div>
+    );
+  }
+  if (property.prop_type === "rollup") {
+    return (
+      <div className="px-3 py-2 min-w-[140px] text-sm text-ink-faint italic">
+        {value || "—"}
+      </div>
+    );
+  }
+
   if (editing) {
     return (
       <div className="px-3 py-2 min-w-[140px]">

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useState } from "react";
 import { Sidebar } from "@/components/sidebar/Sidebar";
 import { BlockEditor } from "@/components/editor/BlockEditor";
 import { QuickFind } from "@/components/search/QuickFind";
@@ -69,7 +69,16 @@ function App() {
   const editorRef = useRef<any>(null);
   const bootstrappedRef = useRef(false);
 
-  const { doc, provider, ready, initialContent } = useYjsSync(currentPage?.id ?? null, false);
+  const [yjsEnabled, setYjsEnabled] = useState(false);
+  useEffect(() => {
+    const wsUrl = "ws://localhost:1234";
+    const ws = new WebSocket(wsUrl);
+    ws.onopen = () => { ws.close(); setYjsEnabled(true); };
+    ws.onerror = () => setYjsEnabled(false);
+    return () => ws.close();
+  }, []);
+
+  const { doc, provider, ready, initialContent } = useYjsSync(currentPage?.id ?? null, yjsEnabled);
 
   useEffect(() => {
     if (bootstrappedRef.current) return;

@@ -1,5 +1,5 @@
-import { useEffect, useMemo } from "react";
-import { Table2, Columns3, Calendar, Image, GitBranch, List, BarChart3, Plus, Settings2 } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Table2, Columns3, Calendar, Image, GitBranch, List, BarChart3, Plus, Settings2, Type, Hash, CheckSquare, CalendarDays, Link, Mail, Phone, Star, GripVertical } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useDBStore } from "@/stores/database";
 import { useDatabase } from "@/hooks/useDatabase";
@@ -11,7 +11,7 @@ import { TimelineView } from "./views/TimelineView";
 import { ListView } from "./views/ListView";
 import { ChartView } from "./views/ChartView";
 import { FiltersBar } from "./FiltersBar";
-import type { ViewType, DBItem, FilterGroup, SortRule } from "@/types/database";
+import type { ViewType, DBItem, FilterGroup, SortRule, PropertyType } from "@/types/database";
 
 const viewIcons: Record<ViewType, React.ReactNode> = {
   table: <Table2 className="h-4 w-4" />,
@@ -22,6 +22,20 @@ const viewIcons: Record<ViewType, React.ReactNode> = {
   list: <List className="h-4 w-4" />,
   chart: <BarChart3 className="h-4 w-4" />,
 };
+
+const PROPERTY_TYPES: { type: PropertyType; label: string; icon: React.ReactNode }[] = [
+  { type: "text", label: "Text", icon: <Type className="h-3.5 w-3.5" /> },
+  { type: "number", label: "Number", icon: <Hash className="h-3.5 w-3.5" /> },
+  { type: "select", label: "Select", icon: <GripVertical className="h-3.5 w-3.5" /> },
+  { type: "multi-select", label: "Multi-select", icon: <CheckSquare className="h-3.5 w-3.5" /> },
+  { type: "date", label: "Date", icon: <CalendarDays className="h-3.5 w-3.5" /> },
+  { type: "checkbox", label: "Checkbox", icon: <CheckSquare className="h-3.5 w-3.5" /> },
+  { type: "url", label: "URL", icon: <Link className="h-3.5 w-3.5" /> },
+  { type: "email", label: "Email", icon: <Mail className="h-3.5 w-3.5" /> },
+  { type: "phone", label: "Phone", icon: <Phone className="h-3.5 w-3.5" /> },
+  { type: "status", label: "Status", icon: <Star className="h-3.5 w-3.5" /> },
+  { type: "rating", label: "Rating", icon: <Star className="h-3.5 w-3.5" /> },
+];
 
 function applyFilters(items: DBItem[], itemProperties: Record<string, any[]>, properties: any[], filters: FilterGroup[]): DBItem[] {
   if (filters.length === 0) return items;
@@ -72,10 +86,24 @@ function applySorts(items: DBItem[], itemProperties: Record<string, any[]>, prop
 export function DatabaseView({ pageId }: { pageId: string }) {
   const { views, activeViewId, setActiveViewId, properties, items, itemProperties, filters, sorts } = useDBStore();
   const { loadDatabase, addProperty } = useDatabase();
+  const [showTypePicker, setShowTypePicker] = useState(false);
+  const pickerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     loadDatabase(pageId);
   }, [pageId, loadDatabase]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
+        setShowTypePicker(false);
+      }
+    };
+    if (showTypePicker) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [showTypePicker]);
 
   const filteredItems = useMemo(
     () => applySorts(applyFilters(items, itemProperties, properties, filters), itemProperties, properties, sorts),
@@ -99,7 +127,10 @@ export function DatabaseView({ pageId }: { pageId: string }) {
     }
   };
 
-  const visibleProps = properties.filter((p) => views.find(v => v.id === activeViewId));
+  const handleAddProperty = (type: PropertyType) => {
+    addProperty("New Property", type);
+    setShowTypePicker(false);
+  };
 
   return (
     <div className="h-full flex flex-col">
@@ -121,13 +152,31 @@ export function DatabaseView({ pageId }: { pageId: string }) {
             </button>
           ))}
         </div>
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => addProperty("New Property", "text")}
-            className="flex items-center gap-1 rounded-md px-2 py-1.5 text-xs text-ink-muted hover:bg-sidebar-hover transition-colors"
-          >
-            <Plus className="h-3.5 w-3.5" /> Property
-          </button>
+        <div className="flex items-center gap-1 relative">
+          <div ref={pickerRef} className="relative">
+            <button
+              onClick={() => setShowTypePicker(!showTypePicker)}
+              className="flex items-center gap-1 rounded-md px-2 py-1.5 text-xs text-ink-muted hover:bg-sidebar-hover transition-colors"
+            >
+              <Plus className="h-3.5 w-3.5" /> Property
+            </button>
+            {showTypePicker && (
+              <div className="absolute right-0 top-full mt-1 w-48 bg-canvas border border-hairline rounded-lg shadow-lg z-50 p-1.5">
+                <div className="grid grid-cols-2 gap-1">
+                  {PROPERTY_TYPES.map((pt) => (
+                    <button
+                      key={pt.type}
+                      onClick={() => handleAddProperty(pt.type)}
+                      className="flex items-center gap-2 rounded-md px-2 py-1.5 text-xs text-ink-secondary hover:bg-sidebar-hover transition-colors"
+                    >
+                      {pt.icon}
+                      {pt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
           <button className="flex items-center gap-1 rounded-md px-2 py-1.5 text-xs text-ink-muted hover:bg-sidebar-hover transition-colors">
             <Settings2 className="h-3.5 w-3.5" />
           </button>
